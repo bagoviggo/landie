@@ -6,13 +6,14 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  phone: string;
   password: string;
 };
 
-export type Customer = {
+export type Tenant = {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   image_url: string;
 };
 
@@ -23,7 +24,7 @@ export type Invoice = {
   date: string;
   // In TypeScript, this is called a string union type.
   // It means that the "status" property can only be one of the two strings: 'pending' or 'paid'.
-  status: 'pending' | 'paid';
+  status: 'pending' | 'paid' | 'late';
 };
 
 export type Revenue = {
@@ -35,7 +36,7 @@ export type LatestInvoice = {
   id: string;
   name: string;
   image_url: string;
-  email: string;
+  phone: string;
   amount: string;
 };
 
@@ -46,16 +47,16 @@ export type LatestInvoiceRaw = Omit<LatestInvoice, 'amount'> & {
 
 export type InvoicesTable = {
   id: string;
-  customer_id: string;
+  tenant_id: string;
   name: string;
-  email: string;
+  phone: string;
   image_url: string;
   date: string;
   amount: number;
-  status: 'pending' | 'paid';
+  status: 'pending' | 'paid' | 'late';
 };
 
-export type CustomersTableType = {
+export type TenantsTableType = {
   id: string;
   name: string;
   email: string;
@@ -65,7 +66,7 @@ export type CustomersTableType = {
   total_paid: number;
 };
 
-export type FormattedCustomersTable = {
+export type FormattedTenantsTable = {
   id: string;
   name: string;
   email: string;
@@ -75,14 +76,43 @@ export type FormattedCustomersTable = {
   total_paid: string;
 };
 
-export type CustomerField = {
+export type TenantField = {
   id: string;
   name: string;
+  phone: string;
+  email: string;
 };
 
 export type InvoiceForm = {
   id: string;
   customer_id: string;
   amount: number;
-  status: 'pending' | 'paid';
+  status: 'pending' | 'paid' | 'late';
+};
+
+
+export type Maintenance = { 
+  id: string; tenant_id: string;
+  description: string;
+  date: string;
+  status: 'pending' | 'completed';
+};
+
+export type MaintenanceTable = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  phone: string;
+  image_url: string;
+  description: string;
+  date: string;
+  status: 'pending' | 'completed';
+};
+
+export type MaintenanceForm = {
+  id: string;
+  tenant_id: string;
+  description: string;
+  date: string;
+  status: 'pending' | 'completed';
 };

@@ -1,10 +1,11 @@
 'use client';
 
-import { CustomerField, InvoiceForm } from '@/app/lib/definitions';
+import { TenantField, InvoiceForm } from '@/app/lib/definitions';
 import {
   CheckIcon,
   ClockIcon,
   CurrencyDollarIcon,
+  HandThumbDownIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
@@ -12,32 +13,32 @@ import { Button } from '@/app/ui/button';
 
 export default function EditInvoiceForm({
   invoice,
-  customers,
+  tenants,
 }: {
   invoice: InvoiceForm;
-  customers: CustomerField[];
+  tenants: TenantField[];
 }) {
   return (
     <form>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
-        {/* Customer Name */}
+        {/* Tenant Name */}
         <div className="mb-4">
-          <label htmlFor="customer" className="mb-2 block text-sm font-medium">
-            Choose customer
+          <label htmlFor="tenant" className="mb-2 block text-sm font-medium">
+            Choose tenant
           </label>
           <div className="relative">
             <select
-              id="customer"
-              name="customerId"
+              id="tenant"
+              name="tenantId"
               className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-              defaultValue={invoice.customer_id}
+              defaultValue={invoice.tenant_id}
             >
               <option value="" disabled>
-                Select a customer
+                Select a tenant
               </option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
+              {tenants.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.name}
                 </option>
               ))}
             </select>
@@ -91,18 +92,34 @@ export default function EditInvoiceForm({
               </div>
               <div className="flex items-center">
                 <input
-                  id="paid"
+                  id="late"
                   name="status"
                   type="radio"
-                  value="paid"
-                  defaultChecked={invoice.status === 'paid'}
+                  value="late"
+                  defaultChecked={invoice.status === 'late'}
                   className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
                 />
                 <label
-                  htmlFor="paid"
+                  htmlFor="late"
                   className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-green-500 px-3 py-1.5 text-xs font-medium text-white"
                 >
                   Paid <CheckIcon className="h-4 w-4" />
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="late"
+                  name="status"
+                  type="radio"
+                  value="late"
+                  defaultChecked={invoice.status === 'late'}
+                  className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
+                />
+                <label
+                  htmlFor="late"
+                  className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-red-500 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  Late <HandThumbDownIcon className="h-4 w-4" />
                 </label>
               </div>
             </div>

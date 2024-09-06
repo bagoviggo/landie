@@ -4,6 +4,7 @@ import {
   CheckIcon,
   ClockIcon,
   CurrencyDollarIcon,
+  HandThumbDownIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@/app/ui/button';
@@ -81,17 +82,32 @@ export default function Form({ tenants }: { tenants: TenantField[] }) {
               </div>
               <div className="flex items-center">
                 <input
-                  id="paid"
+                  id="late"
                   name="status"
                   type="radio"
-                  value="paid"
+                  value="late"
                   className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
                 />
                 <label
-                  htmlFor="paid"
+                  htmlFor="late"
                   className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-green-500 px-3 py-1.5 text-xs font-medium text-white"
                 >
                   Paid <CheckIcon className="h-4 w-4" />
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="late"
+                  name="status"
+                  type="radio"
+                  value="late"
+                  className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
+                />
+                <label
+                  htmlFor="late"
+                  className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-red-500 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  Paid <HandThumbDownIcon className="h-4 w-4" />
                 </label>
               </div>
             </div>

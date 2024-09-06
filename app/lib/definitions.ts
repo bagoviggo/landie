@@ -14,6 +14,7 @@ export type Tenant = {
   id: string;
   name: string;
   phone: string;
+  email: string
   image_url: string;
 };
 
@@ -59,6 +60,7 @@ export type InvoicesTable = {
 export type TenantsTableType = {
   id: string;
   name: string;
+  phone: string;
   email: string;
   image_url: string;
   total_invoices: number;
@@ -69,6 +71,7 @@ export type TenantsTableType = {
 export type FormattedTenantsTable = {
   id: string;
   name: string;
+  phone: string;
   email: string;
   image_url: string;
   total_invoices: number;

@@ -35,7 +35,7 @@ export default async function InvoicesTable({
                       />
                       <p>{invoice.name}</p>
                     </div>
-                    <p className="text-sm text-gray-500">{invoice.email}</p>
+                    <p className="text-sm text-gray-500">{invoice.phone}</p>
                   </div>
                   <InvoiceStatus status={invoice.status} />
                 </div>
@@ -61,7 +61,7 @@ export default async function InvoicesTable({
                   Customer
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
-                  Email
+                  Phone
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
                   Amount
@@ -96,7 +96,7 @@ export default async function InvoicesTable({
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
-                    {invoice.email}
+                    {invoice.phone}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
                     {formatCurrency(invoice.amount)}

@@ -19,7 +19,7 @@ export type Tenant = {
 
 export type Invoice = {
   id: string;
-  customer_id: string;
+  tenant_id: string;
   amount: number;
   date: string;
   // In TypeScript, this is called a string union type.
@@ -85,7 +85,7 @@ export type TenantField = {
 
 export type InvoiceForm = {
   id: string;
-  customer_id: string;
+  tenant_id: string;
   amount: number;
   status: 'pending' | 'paid' | 'late';
 };

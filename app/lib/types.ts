@@ -14,6 +14,14 @@ export interface TenantData {
     emergency_contact: string;
 }
 
+export type InvoiceValues = {
+    id: string;
+    tenant_id: string;
+    amount: number;
+    date: Date; // Ensure this is a Date object, not a string
+    status: 'pending' | 'paid';
+  };
+
 // app/lib/types.ts
 
 // User Type Definition
@@ -69,7 +77,7 @@ export type InvoicesTable = {
   id: string; // Unique identifier for the invoice
   tenant_id: string; // Reference to the tenant associated with the invoice
   name: string; // Name of the tenant
-  email: string; // Email of the tenant
+  phone: string; // phone of the tenant
   image_url: string; // URL to the tenant's image
   date: Date; // Date of the invoice
   amount: number; // Amount to be paid

@@ -36,6 +36,22 @@ export const properties = pgTable('properties', {
   landlord_id: uuid('landlord_id').notNull().references(() => users.id), // Link to landlord in users table
 });
 
+// Invoices Table
+export const invoices = pgTable('invoices', {
+  id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
+  tenant_id: uuid('tenant_id').notNull().references(() => tenants.id), // Reference to tenants
+  amount: integer('amount').notNull(),
+  date: date('date').notNull(),
+  status: varchar('status', { length: 50 }).notNull(), // 'pending', 'paid', 'late'
+});
+
+// Revenue Table
+export const revenue = pgTable('revenue', {
+  id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
+  month: varchar('month', { length: 7 }).notNull(),
+  revenue: integer('revenue').notNull(),
+});
+
 // Units Table
 export const units = pgTable('units', {
   id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),

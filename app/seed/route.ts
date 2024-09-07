@@ -1,44 +1,45 @@
+// app/seed/route.ts
 import { sql } from '@vercel/postgres';
 import { drizzle } from 'drizzle-orm/vercel-postgres';
 import { randUuid, randFullName, randEmail, randAvatar, randAddress, randPastDate, randPhoneNumber } from '@ngneat/falso';
-import { users, landlords, tenants, properties, units, maintenance } from '../lib/definitions';
-import type { UnitData, TenantData } from '../lib/types'; // Adjust import path as needed
+import { users, landlords, tenants, properties, units, maintenance, invoices, revenue } from '../lib/definitions';
+import type { UnitData, TenantData, Invoice, Revenue } from '../lib/types'; // Adjust import path as needed
 
-export const db = drizzle(sql);
+const db = drizzle(sql);
 
 export async function GET(request: Request) {
   try {
     await db.transaction(async (tx) => {
-      // Seed Users - Create some users manually for landlords and tenants
+      // Seed Users
       const userData = Array.from({ length: 10 }, () => ({
         id: randUuid(),
         name: randFullName(),
         email: randEmail(),
         image: randAvatar(),
-        role: Math.random() < 0.5 ? 'landlord' : 'tenant', // Add role to match schema
+        role: Math.random() < 0.5 ? 'landlord' : 'tenant',
         created_at: new Date().toISOString(),
       }));
       await db.insert(users).values(userData);
 
-      // Landlord-specific users (Subset of seeded users)
-      const landlordUsers = userData.slice(0, 3); // Assume first 3 users are landlords
+      // Seed Landlords
+      const landlordUsers = userData.slice(0, 3);
       const landlordData = landlordUsers.map(user => ({
         id: randUuid(),
-        user_id: user.id,  // Link landlord to a user
+        user_id: user.id,
         company_name: `Company of ${user.name}`,
       }));
       await db.insert(landlords).values(landlordData);
 
-      // Seed Properties - Link properties to landlords (address is a string)
+      // Seed Properties
       const propertyData = Array.from({ length: 5 }, () => ({
         id: randUuid(),
-        address: String(randAddress()), // Ensure address is a string
-        total_units: Math.floor(Math.random() * 20) + 1, // Random number of units per property
-        landlord_id: landlordData[Math.floor(Math.random() * landlordData.length)].user_id,  // Link property to a landlord
+        address: String(randAddress()),
+        total_units: Math.floor(Math.random() * 20) + 1,
+        landlord_id: landlordData[Math.floor(Math.random() * landlordData.length)].user_id,
       }));
       await db.insert(properties).values(propertyData);
 
-      // Seed Units - Create units linked to properties
+      // Seed Units
       const unitData: UnitData[] = Array.from({ length: 20 }, () => ({
         id: randUuid(),
         property_id: propertyData[Math.floor(Math.random() * propertyData.length)].id,
@@ -47,14 +48,14 @@ export async function GET(request: Request) {
       }));
       await db.insert(units).values(unitData);
 
-      // Tenant-specific users (Subset of seeded users)
-      const tenantUsers = userData.slice(3); // Assume the remaining users are tenants
+      // Seed Tenants
+      const tenantUsers = userData.slice(3);
       const tenantData: TenantData[] = tenantUsers.map(user => ({
         id: randUuid(),
-        user_id: user.id,  // Link tenant to a user
-        property_id: propertyData[Math.floor(Math.random() * propertyData.length)].id,  // Link tenant to a random property
+        user_id: user.id,
+        property_id: propertyData[Math.floor(Math.random() * propertyData.length)].id,
         move_in_date: randPastDate().toISOString(),
-        unit_occupied: unitData[Math.floor(Math.random() * unitData.length)].unit_number,  // Assign random unit to tenant
+        unit_occupied: unitData[Math.floor(Math.random() * unitData.length)].unit_number,
         emergency_contact: randPhoneNumber(),
       }));
       await db.insert(tenants).values(tenantData);
@@ -62,12 +63,30 @@ export async function GET(request: Request) {
       // Seed Maintenance Requests
       const maintenanceData = Array.from({ length: 10 }, () => ({
         id: randUuid(),
-        unit_id: unitData[Math.floor(Math.random() * unitData.length)].id, // Link maintenance to a unit
+        unit_id: unitData[Math.floor(Math.random() * unitData.length)].id,
         description: 'Fix leaking faucet',
         date: randPastDate().toISOString(),
-        status: Math.random() < 0.33 ? 'pending' : Math.random() < 0.5 ? 'in_progress' : 'completed', // Include 'in_progress'
+        status: Math.random() < 0.33 ? 'pending' : Math.random() < 0.5 ? 'in_progress' : 'completed',
       }));
       await db.insert(maintenance).values(maintenanceData);
+
+      // Seed Invoices
+      const invoiceData = Array.from({ length: 20 }, () => ({
+        tenant_id: tenantData[Math.floor(Math.random() * tenantData.length)].id,
+        amount: Math.floor(Math.random() * 900) + 100,
+        date: randPastDate().toISOString().split('T')[0], // Format date as YYYY-MM-DD
+        status: Math.random() < 0.5 ? 'pending' : 'paid',
+      }));
+      
+      await db.insert(invoices).values(invoiceData);
+
+      // Seed Revenue
+      const revenueData: Revenue[] = Array.from({ length: 12 }, (_, index) => ({
+        id: randUuid(),
+        month: new Date(new Date().getFullYear(), index).toISOString().slice(0, 7),
+        revenue: Math.floor(Math.random() * 50000) + 10000,
+      }));
+      await db.insert(revenue).values(revenueData);
 
     });
 

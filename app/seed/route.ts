@@ -83,7 +83,7 @@ export async function GET(request: Request) {
       // Seed Revenue
       const revenueData: Revenue[] = Array.from({ length: 12 }, (_, index) => ({
         id: randUuid(),
-        month: new Date(new Date().getFullYear(), index).toISOString().slice(0, 7),
+        month: new Date(2024, index).toLocaleString('default', { month: 'short' }), // Example: 'Jan', 'Feb'
         revenue: Math.floor(Math.random() * 50000) + 10000,
       }));
       await db.insert(revenue).values(revenueData);

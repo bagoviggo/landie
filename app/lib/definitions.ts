@@ -48,7 +48,7 @@ export const invoices = pgTable('invoices', {
 // Revenue Table
 export const revenue = pgTable('revenue', {
   id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
-  month: varchar('month', { length: 7 }).notNull(),
+  month: text('month').notNull(),
   revenue: integer('revenue').notNull(),
 });
 

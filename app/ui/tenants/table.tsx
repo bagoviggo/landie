@@ -4,7 +4,7 @@ import Search from '@/app/ui/search';
 import {
   TenantsTableType,
   FormattedTenantsTable,
-} from '@/app/lib/definitions';
+} from '@/app/lib/types';
 
 export default async function TenantsTable({
   tenants,

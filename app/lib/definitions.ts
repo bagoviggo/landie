@@ -1,121 +1,55 @@
-// This file contains type definitions for your data.
-// It describes the shape of the data, and what data type each property should accept.
-// For simplicity of teaching, we're manually defining these types.
-// However, these types are generated automatically if you're using an ORM such as Prisma.
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-};
+import { pgTable, uuid, text, varchar, date, integer } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
-export type Tenant = {
-  id: string;
-  name: string;
-  phone: string;
-  email: string
-  image_url: string;
-};
+// Users Table
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  image: text('image').notNull(),
+  role: varchar('role', { length: 20 }).notNull(), // 'landlord' or 'tenant'
+  created_at: date('created_at').notNull(),
+});
 
-export type Invoice = {
-  id: string;
-  tenant_id: string;
-  amount: number;
-  date: string;
-  // In TypeScript, this is called a string union type.
-  // It means that the "status" property can only be one of the two strings: 'pending' or 'paid'.
-  status: 'pending' | 'paid' | 'late';
-};
+// Landlords Table
+export const landlords = pgTable('landlords', {
+  id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
+  user_id: uuid('user_id').notNull().references(() => users.id), // Foreign key to users
+  company_name: text('company_name'), // Optional company info
+});
 
-export type Revenue = {
-  month: string;
-  revenue: number;
-};
+// Tenants Table
+export const tenants = pgTable('tenants', {
+  id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
+  user_id: uuid('user_id').notNull().references(() => users.id), // Foreign key to users
+  property_id: uuid('property_id').notNull(), // Reference to properties table
+  move_in_date: date('move_in_date').notNull(),
+  unit_occupied: varchar('unit_occupied', { length: 50 }).notNull(),
+  emergency_contact: text('emergency_contact').notNull(),
+});
 
-export type LatestInvoice = {
-  id: string;
-  name: string;
-  image_url: string;
-  phone: string;
-  amount: string;
-};
+// Properties Table
+export const properties = pgTable('properties', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  address: text('address').notNull(),
+  total_units: integer('total_units').notNull(),
+  landlord_id: uuid('landlord_id').notNull().references(() => users.id), // Link to landlord in users table
+});
 
-// The database returns a number for amount, but we later format it to a string with the formatCurrency function
-export type LatestInvoiceRaw = Omit<LatestInvoice, 'amount'> & {
-  amount: number;
-};
+// Units Table
+export const units = pgTable('units', {
+  id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
+  property_id: uuid('property_id').notNull().references(() => properties.id), // Reference to properties
+  tenant_id: uuid('tenant_id').references(() => tenants.id), // Optional reference to tenants if occupied
+  unit_number: varchar('unit_number', { length: 50 }).notNull(),
+  status: varchar('status', { length: 50 }).notNull(), // e.g., 'available', 'occupied'
+});
 
-export type InvoicesTable = {
-  id: string;
-  tenant_id: string;
-  name: string;
-  phone: string;
-  image_url: string;
-  date: string;
-  amount: number;
-  status: 'pending' | 'paid' | 'late';
-};
-
-export type TenantsTableType = {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  image_url: string;
-  total_invoices: number;
-  total_pending: number;
-  total_paid: number;
-};
-
-export type FormattedTenantsTable = {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  image_url: string;
-  total_invoices: number;
-  total_pending: string;
-  total_paid: string;
-};
-
-export type TenantField = {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-};
-
-export type InvoiceForm = {
-  id: string;
-  tenant_id: string;
-  amount: number;
-  status: 'pending' | 'paid' | 'late';
-};
-
-
-export type Maintenance = { 
-  id: string; tenant_id: string;
-  description: string;
-  date: string;
-  status: 'pending' | 'completed';
-};
-
-export type MaintenanceTable = {
-  id: string;
-  tenant_id: string;
-  name: string;
-  phone: string;
-  image_url: string;
-  description: string;
-  date: string;
-  status: 'pending' | 'completed';
-};
-
-export type MaintenanceForm = {
-  id: string;
-  tenant_id: string;
-  description: string;
-  date: string;
-  status: 'pending' | 'completed';
-};
+// Maintenance Table
+export const maintenance = pgTable('maintenance', {
+  id: uuid('id').primaryKey().default(sql`uuid_generate_v4()`),
+  unit_id: uuid('unit_id').notNull().references(() => units.id), // Reference to unit
+  description: text('description').notNull(),
+  date: date('date').notNull(),
+  status: varchar('status', { length: 50 }).notNull(), // 'pending', 'in_progress', 'completed'
+});

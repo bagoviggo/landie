@@ -1,6 +1,6 @@
 'use client';
 
-import { TenantField, InvoiceForm } from '@/app/lib/definitions';
+import { TenantField, InvoiceForm } from '@/app/lib/types';
 import {
   CheckIcon,
   ClockIcon,

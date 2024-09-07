@@ -1,122 +1,80 @@
-// import bcrypt from 'bcrypt';
-// import { db } from '@vercel/postgres';
-// import { invoices, customers, revenue, users } from '../lib/placeholder-data';
+import { sql } from '@vercel/postgres';
+import { drizzle } from 'drizzle-orm/vercel-postgres';
+import { randUuid, randFullName, randEmail, randAvatar, randAddress, randPastDate, randPhoneNumber } from '@ngneat/falso';
+import { users, landlords, tenants, properties, units, maintenance } from '../lib/definitions';
+import type { UnitData, TenantData } from '../lib/types'; // Adjust import path as needed
 
-// const client = await db.connect();
+export const db = drizzle(sql);
 
-// async function seedUsers() {
-//   await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-//   await client.sql`
-//     CREATE TABLE IF NOT EXISTS users (
-//       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-//       name VARCHAR(255) NOT NULL,
-//       email TEXT NOT NULL UNIQUE,
-//       password TEXT NOT NULL
-//     );
-//   `;
+export async function GET(request: Request) {
+  try {
+    await db.transaction(async (tx) => {
+      // Seed Users - Create some users manually for landlords and tenants
+      const userData = Array.from({ length: 10 }, () => ({
+        id: randUuid(),
+        name: randFullName(),
+        email: randEmail(),
+        image: randAvatar(),
+        role: Math.random() < 0.5 ? 'landlord' : 'tenant', // Add role to match schema
+        created_at: new Date().toISOString(),
+      }));
+      await db.insert(users).values(userData);
 
-//   const insertedUsers = await Promise.all(
-//     users.map(async (user) => {
-//       const hashedPassword = await bcrypt.hash(user.password, 10);
-//       return client.sql`
-//         INSERT INTO users (id, name, email, password)
-//         VALUES (${user.id}, ${user.name}, ${user.email}, ${hashedPassword})
-//         ON CONFLICT (id) DO NOTHING;
-//       `;
-//     }),
-//   );
+      // Landlord-specific users (Subset of seeded users)
+      const landlordUsers = userData.slice(0, 3); // Assume first 3 users are landlords
+      const landlordData = landlordUsers.map(user => ({
+        id: randUuid(),
+        user_id: user.id,  // Link landlord to a user
+        company_name: `Company of ${user.name}`,
+      }));
+      await db.insert(landlords).values(landlordData);
 
-//   return insertedUsers;
-// }
+      // Seed Properties - Link properties to landlords (address is a string)
+      const propertyData = Array.from({ length: 5 }, () => ({
+        id: randUuid(),
+        address: String(randAddress()), // Ensure address is a string
+        total_units: Math.floor(Math.random() * 20) + 1, // Random number of units per property
+        landlord_id: landlordData[Math.floor(Math.random() * landlordData.length)].user_id,  // Link property to a landlord
+      }));
+      await db.insert(properties).values(propertyData);
 
-// async function seedInvoices() {
-//   await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+      // Seed Units - Create units linked to properties
+      const unitData: UnitData[] = Array.from({ length: 20 }, () => ({
+        id: randUuid(),
+        property_id: propertyData[Math.floor(Math.random() * propertyData.length)].id,
+        unit_number: `Unit ${Math.floor(Math.random() * 100) + 1}`,
+        status: Math.random() < 0.5 ? 'available' : 'occupied',
+      }));
+      await db.insert(units).values(unitData);
 
-//   await client.sql`
-//     CREATE TABLE IF NOT EXISTS invoices (
-//       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-//       customer_id UUID NOT NULL,
-//       amount INT NOT NULL,
-//       status VARCHAR(255) NOT NULL,
-//       date DATE NOT NULL
-//     );
-//   `;
+      // Tenant-specific users (Subset of seeded users)
+      const tenantUsers = userData.slice(3); // Assume the remaining users are tenants
+      const tenantData: TenantData[] = tenantUsers.map(user => ({
+        id: randUuid(),
+        user_id: user.id,  // Link tenant to a user
+        property_id: propertyData[Math.floor(Math.random() * propertyData.length)].id,  // Link tenant to a random property
+        move_in_date: randPastDate().toISOString(),
+        unit_occupied: unitData[Math.floor(Math.random() * unitData.length)].unit_number,  // Assign random unit to tenant
+        emergency_contact: randPhoneNumber(),
+      }));
+      await db.insert(tenants).values(tenantData);
 
-//   const insertedInvoices = await Promise.all(
-//     invoices.map(
-//       (invoice) => client.sql`
-//         INSERT INTO invoices (customer_id, amount, status, date)
-//         VALUES (${invoice.customer_id}, ${invoice.amount}, ${invoice.status}, ${invoice.date})
-//         ON CONFLICT (id) DO NOTHING;
-//       `,
-//     ),
-//   );
+      // Seed Maintenance Requests
+      const maintenanceData = Array.from({ length: 10 }, () => ({
+        id: randUuid(),
+        unit_id: unitData[Math.floor(Math.random() * unitData.length)].id, // Link maintenance to a unit
+        description: 'Fix leaking faucet',
+        date: randPastDate().toISOString(),
+        status: Math.random() < 0.33 ? 'pending' : Math.random() < 0.5 ? 'in_progress' : 'completed', // Include 'in_progress'
+      }));
+      await db.insert(maintenance).values(maintenanceData);
 
-//   return insertedInvoices;
-// }
+    });
 
-// async function seedCustomers() {
-//   await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+    return new Response(JSON.stringify({ message: 'Database seeded successfully' }), { status: 200 });
 
-//   await client.sql`
-//     CREATE TABLE IF NOT EXISTS customers (
-//       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-//       name VARCHAR(255) NOT NULL,
-//       email VARCHAR(255) NOT NULL,
-//       image_url VARCHAR(255) NOT NULL
-//     );
-//   `;
-
-//   const insertedCustomers = await Promise.all(
-//     customers.map(
-//       (customer) => client.sql`
-//         INSERT INTO customers (id, name, email, image_url)
-//         VALUES (${customer.id}, ${customer.name}, ${customer.email}, ${customer.image_url})
-//         ON CONFLICT (id) DO NOTHING;
-//       `,
-//     ),
-//   );
-
-//   return insertedCustomers;
-// }
-
-// async function seedRevenue() {
-//   await client.sql`
-//     CREATE TABLE IF NOT EXISTS revenue (
-//       month VARCHAR(4) NOT NULL UNIQUE,
-//       revenue INT NOT NULL
-//     );
-//   `;
-
-//   const insertedRevenue = await Promise.all(
-//     revenue.map(
-//       (rev) => client.sql`
-//         INSERT INTO revenue (month, revenue)
-//         VALUES (${rev.month}, ${rev.revenue})
-//         ON CONFLICT (month) DO NOTHING;
-//       `,
-//     ),
-//   );
-
-//   return insertedRevenue;
-// }
-
-export async function GET() {
-  return Response.json({
-    message:
-      'Uncomment this file and remove this line. You can delete this file when you are finished.',
-  });
-  // try {
-  //   await client.sql`BEGIN`;
-  //   await seedUsers();
-  //   await seedCustomers();
-  //   await seedInvoices();
-  //   await seedRevenue();
-  //   await client.sql`COMMIT`;
-
-  //   return Response.json({ message: 'Database seeded successfully' });
-  // } catch (error) {
-  //   await client.sql`ROLLBACK`;
-  //   return Response.json({ error }, { status: 500 });
-  // }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
+  }
 }

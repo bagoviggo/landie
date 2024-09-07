@@ -1,4 +1,4 @@
-import { TenantField } from '@/app/lib/definitions';
+import { TenantField } from '@/app/lib/types';
 import Link from 'next/link';
 import {
   CheckIcon,

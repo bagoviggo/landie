@@ -61,10 +61,14 @@ export type Revenue = {
 
 // Latest Invoice Type Definition
 export type LatestInvoice = {
-  id: string; // Unique identifier for the latest invoice
   tenant_id: string; // Reference to the tenant associated with the invoice
-  amount: string; // Amount formatted as a string for display
+  amount: number; // Amount formatted as a string for display
+  status: string;
   date: Date; // Date of the invoice
+  name: string; //name of tenant
+  image_url: string;
+  phone: string;
+  id: string;
 };
 
 // Raw Invoice Type Definition

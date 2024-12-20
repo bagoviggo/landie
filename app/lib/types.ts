@@ -1,28 +1,26 @@
 export interface UnitData {
-    id: string;
-    property_id: string;
-    unit_number: string;
-    status: 'available' | 'occupied';
+  id: string;
+  property_id: string;
+  unit_number: string;
+  status: 'available' | 'occupied';
 }
   
 export interface TenantData {
-    id: string;
-    user_id: string;
-    property_id: string;
-    move_in_date: string;
-    unit_occupied: string;
-    emergency_contact: string;
+  id: string;
+  user_id: string;
+  property_id: string;
+  move_in_date: string;
+  unit_occupied: string;
+  emergency_contact: string;
 }
 
 export type InvoiceValues = {
-    id: string;
-    tenant_id: string;
-    amount: number;
-    date: Date; // Ensure this is a Date object, not a string
-    status: 'pending' | 'paid';
-  };
-
-// app/lib/types.ts
+  id: string;
+  tenant_id: string;
+  amount: number;
+  date: Date; // Ensure this is a Date object, not a string
+  status: 'pending' | 'paid';
+};
 
 // User Type Definition
 export type User = {
@@ -42,6 +40,8 @@ export type Tenant = {
   move_in_date: Date; // Date when the tenant moved in
   unit_occupied: string; // Unit occupied by the tenant
   emergency_contact: string; // Emergency contact information
+  name: string; // Full name of the tenant
+  phone: string; // Phone number of the tenant
 };
 
 // Invoice Type Definition
@@ -51,7 +51,7 @@ export type Invoice = {
   amount: number; // Amount to be paid
   date: Date; // Date of the invoice
   status: 'pending' | 'paid' | 'late'; // Current status of the invoice
-};
+} & Pick<Tenant, 'name' | 'phone'>;
 
 // Revenue Type Definition
 export type Revenue = {
@@ -59,17 +59,44 @@ export type Revenue = {
   revenue: number; // Total revenue for the month
 };
 
+// Latest Unit Update Type Definition
+export type LatestUnitUpdate = {
+  unit_id: string; // Reference to the unit
+  update_type: 'payment' | 'maintenance'; // Type of update
+  status: 'completed' | 'pending'; // Status of the update
+  date: Date; // Date of the update
+  description: string; // Description of the update
+  color_code: string; // Color code to differentiate updates
+};
+
+// Unit Type Definition
+export type Unit = {
+  id: string; // Unique identifier for the unit
+  property_id: string; // Reference to the property the unit belongs to
+  unit_number: string; // Unit number or identifier
+  status: 'available' | 'occupied'; // Current status of the unit
+} & Pick<Tenant, 'name' | 'phone'>;
+
+// Units Table Type Definition
+export type UnitsTable = {
+  id: string; // Unique identifier for the unit
+  property_id: string; // Reference to the property the unit belongs to
+  unit_number: string; // Unit number or identifier
+  status: 'available' | 'occupied'; // Current status of the unit
+  tenant_name?: string; // Name of the tenant if the unit is occupied
+  tenant_email?: string; // Email of the tenant if the unit is occupied
+  tenant_phone?: string; // Phone number of the tenant if the unit is occupied
+};
+
 // Latest Invoice Type Definition
 export type LatestInvoice = {
+  id: string; // Unique identifier for the invoice
   tenant_id: string; // Reference to the tenant associated with the invoice
-  amount: number; // Amount formatted as a string for display
-  status: string;
+  amount: number; // Amount to be paid
   date: Date; // Date of the invoice
-  name: string; //name of tenant
-  image_url: string;
-  phone: string;
-  id: string;
-};
+  status: 'pending' | 'paid' | 'late'; // Current status of the invoice
+  image_url: string; // URL to the tenant's image
+} & Pick<Tenant, 'name' | 'phone'>;
 
 // Raw Invoice Type Definition
 export type LatestInvoiceRaw = Omit<LatestInvoice, 'amount'> & {
@@ -81,7 +108,7 @@ export type InvoicesTable = {
   id: string; // Unique identifier for the invoice
   tenant_id: string; // Reference to the tenant associated with the invoice
   name: string; // Name of the tenant
-  phone: string; // phone of the tenant
+  phone: string; // Phone number of the tenant
   image_url: string; // URL to the tenant's image
   date: Date; // Date of the invoice
   amount: number; // Amount to be paid
@@ -123,5 +150,3 @@ export type InvoiceForm = {
   amount: number; // Amount to be paid
   status: 'pending' | 'paid' | 'late'; // Current status of the invoice
 };
-
-

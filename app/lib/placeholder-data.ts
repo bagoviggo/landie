@@ -83,7 +83,8 @@ const invoices = [
     date: '2022-12-06',
     name: tenants[0].name,
     image_url: tenants[0].image_url,
-    phone: tenants[0].phone
+    phone: tenants[0].phone,
+    email: tenants[0].email
   },
   {
     id: '2',
@@ -93,7 +94,8 @@ const invoices = [
     date: '2022-11-14',
     name: tenants[1].name,
     image_url: tenants[1].image_url,
-    phone: tenants[1].phone
+    phone: tenants[1].phone,
+    email: tenants[1].email
   },
   {
     id: '3',
@@ -103,7 +105,8 @@ const invoices = [
     date: '2022-10-29',
     name: tenants[4].name,
     image_url: tenants[4].image_url,
-    phone: tenants[4].phone
+    phone: tenants[4].phone,
+    email: tenants[4].email
   },
   {
     id: '4',
@@ -113,7 +116,8 @@ const invoices = [
     date: '2023-09-10',
     name: tenants[3].name,
     image_url: tenants[3].image_url,
-    phone: tenants[3].phone
+    phone: tenants[3].phone,
+    email: tenants[3].email
   },
   {
     id: '5',
@@ -123,7 +127,8 @@ const invoices = [
     date: '2023-08-05',
     name: tenants[5].name,
     image_url: tenants[5].image_url,
-    phone: tenants[5].phone
+    phone: tenants[5].phone,
+    email: tenants[5].email
   },
   {
     id: '6',
@@ -133,7 +138,8 @@ const invoices = [
     date: '2023-07-16',
     name: tenants[2].name,
     image_url: tenants[2].image_url,
-    phone: tenants[2].phone
+    phone: tenants[2].phone,
+    email: tenants[2].email
   },
   {
     id: '7',
@@ -143,7 +149,8 @@ const invoices = [
     date: '2023-06-27',
     name: tenants[0].name,
     image_url: tenants[0].image_url,
-    phone: tenants[0].phone
+    phone: tenants[0].phone,
+    email: tenants[0].email
   },
   {
     id: '8',
@@ -153,7 +160,8 @@ const invoices = [
     date: '2023-06-09',
     name: tenants[3].name,
     image_url: tenants[3].image_url,
-    phone: tenants[3].phone
+    phone: tenants[3].phone,
+    email: tenants[3].email
   },
   {
     id: '9',
@@ -163,7 +171,8 @@ const invoices = [
     date: '2023-06-17',
     name: tenants[4].name,
     image_url: tenants[4].image_url,
-    phone: tenants[4].phone
+    phone: tenants[4].phone,
+    email: tenants[4].email
   },
   {
     id: '10',
@@ -173,7 +182,8 @@ const invoices = [
     date: '2023-06-07',
     name: tenants[5].name,
     image_url: tenants[5].image_url,
-    phone: tenants[5].phone
+    phone: tenants[5].phone,
+    email: tenants[5].email
   },
   {
     id: '11',
@@ -183,7 +193,8 @@ const invoices = [
     date: '2023-08-19',
     name: tenants[1].name,
     image_url: tenants[1].image_url,
-    phone: tenants[1].phone
+    phone: tenants[1].phone,
+    email: tenants[1].email
   },
   {
     id: '12',
@@ -193,7 +204,8 @@ const invoices = [
     date: '2023-06-03',
     name: tenants[5].name,
     image_url: tenants[5].image_url,
-    phone: tenants[5].phone
+    phone: tenants[5].phone,
+    email: tenants[5].email
   },
   {
     id: '13',
@@ -203,7 +215,8 @@ const invoices = [
     date: '2022-06-05',
     name: tenants[2].name,
     image_url: tenants[2].image_url,
-    phone: tenants[2].phone
+    phone: tenants[2].phone,
+    email: tenants[2].email
   },
 ];
 

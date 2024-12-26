@@ -57,9 +57,9 @@ export default function RevenueChart({ revenue }: RevenueChartProps) {
             </div>
           ))}
         </div>
-        <div className="flex items-center pb-2 pt-6">
+        <div className="flex items-center pt-4">
           <CalendarIcon className="h-5 w-5 text-gray-500" />
-          <h3 className="ml-2 text-sm text-gray-500 ">Last {revenue.length} months</h3>
+          <h3 className="ml-2 text-sm text-gray-500">Last {revenue.length} months</h3>
         </div>
       </div>
     </div>

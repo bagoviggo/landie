@@ -2,12 +2,10 @@ import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import Image from 'next/image';
 import { lusitana } from '@/app/ui/fonts';
-import { LatestInvoice } from '@/app/lib/types';
-export default async function LatestInvoices({
-  latestInvoices,
-}: {
-  latestInvoices: LatestInvoice[];
-}) {
+import { invoices } from '@/app/lib/placeholder-data';
+
+export default function LatestInvoices() {
+  const latestInvoices = invoices.slice(0, 5); // Limit to 5 invoices
   return (
     <div className="flex w-full flex-col md:col-span-4">
       <h2 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
@@ -41,7 +39,7 @@ export default async function LatestInvoices({
                       {invoice.name}
                     </p>
                     <p className="hidden text-sm text-gray-500 sm:block">
-                      {invoice.phone}
+                      {invoice.email}
                     </p>
                   </div>
                 </div>

@@ -27,7 +27,7 @@ export default function Page() {
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">
         <RevenueChart revenue={revenue.slice(range[0], range[1] + 1)} />
-        <LatestInvoices latestInvoices={invoices} />
+        {/*<LatestInvoices latestInvoices={invoices} />/*}
       </div>
       <div className="mt-6">
         <input

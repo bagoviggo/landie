@@ -1,0 +1,77 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  image     String?
+  role      String
+  createdAt DateTime @default(now())
+  landlords Landlord[]
+  tenants   Tenant[]
+}
+
+model Landlord {
+  id          String @id @default(uuid())
+  userId      String
+  companyName String
+  user        User   @relation(fields: [userId], references: [id])
+}
+
+model Tenant {
+  id                String @id @default(uuid())
+  userId            String
+  propertyId        String
+  moveInDate        DateTime
+  unitOccupied       String
+  emergencyContact   String
+  user              User   @relation(fields: [userId], references: [id])
+}
+
+model Property {
+  id          String @id @default(uuid())
+  address     String
+  totalUnits  Int
+  landlordId  String
+  landlord    Landlord @relation(fields: [landlordId], references: [id])
+}
+
+model Unit {
+  id          String @id @default(uuid())
+  propertyId  String
+  unitNumber  String
+  status      String
+  property    Property @relation(fields: [propertyId], references: [id])
+}
+
+model Maintenance {
+  id          String @id @default(uuid())
+  unitId      String
+  description String
+  date        DateTime
+  status      String
+  unit        Unit @relation(fields: [unitId], references: [id])
+}
+
+model Invoice {
+  id        String @id @default(uuid())
+  tenantId  String
+  amount    Int
+  date      DateTime
+  status    String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model Revenue {
+  id      String @id @default(uuid())
+  month   String
+  revenue Int
+}

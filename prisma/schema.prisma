@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,65 +8,71 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   name      String
-  email     String   @unique
+  email     String     @unique
   image     String?
   role      String
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
   landlords Landlord[]
   tenants   Tenant[]
 }
 
 model Landlord {
-  id          String @id @default(uuid())
+  id          String     @id @default(uuid())
   userId      String
   companyName String
-  user        User   @relation(fields: [userId], references: [id])
+  user        User       @relation(fields: [userId], references: [id])
+  properties  Property[]
 }
 
 model Tenant {
-  id                String @id @default(uuid())
-  userId            String
-  propertyId        String
-  moveInDate        DateTime
-  unitOccupied       String
-  emergencyContact   String
-  user              User   @relation(fields: [userId], references: [id])
+  id               String    @id @default(uuid())
+  userId           String
+  propertyId       String
+  moveInDate       DateTime
+  unitOccupied     String
+  emergencyContact String
+  user             User      @relation(fields: [userId], references: [id])
+  property         Property  @relation(fields: [propertyId], references: [id])
+  invoices         Invoice[]
 }
 
 model Property {
-  id          String @id @default(uuid())
-  address     String
-  totalUnits  Int
-  landlordId  String
-  landlord    Landlord @relation(fields: [landlordId], references: [id])
+  id         String   @id @default(uuid())
+  address    String
+  totalUnits Int
+  landlordId String
+  landlord   Landlord @relation(fields: [landlordId], references: [id])
+  units      Unit[]
+  tenants    Tenant[]
 }
 
 model Unit {
-  id          String @id @default(uuid())
+  id          String        @id @default(uuid())
   propertyId  String
   unitNumber  String
   status      String
-  property    Property @relation(fields: [propertyId], references: [id])
+  property    Property      @relation(fields: [propertyId], references: [id])
+  maintenances Maintenance[]
 }
 
 model Maintenance {
-  id          String @id @default(uuid())
+  id          String   @id @default(uuid())
   unitId      String
   description String
   date        DateTime
   status      String
-  unit        Unit @relation(fields: [unitId], references: [id])
+  unit        Unit     @relation(fields: [unitId], references: [id])
 }
 
 model Invoice {
-  id        String @id @default(uuid())
-  tenantId  String
-  amount    Int
-  date      DateTime
-  status    String
-  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  id       String   @id @default(uuid())
+  tenantId String
+  amount   Int
+  date     DateTime
+  status   String
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
 }
 
 model Revenue {

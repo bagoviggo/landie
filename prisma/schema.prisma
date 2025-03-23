@@ -11,11 +11,13 @@ model User {
   id        String     @id @default(uuid())
   name      String
   email     String     @unique
+  hashedPassword  String
   image     String?
   role      String
   createdAt DateTime   @default(now())
   landlords Landlord[]
   tenants   Tenant[]
+  @@map("user")
 }
 
 model Landlord {
@@ -24,6 +26,7 @@ model Landlord {
   companyName String
   user        User       @relation(fields: [userId], references: [id])
   properties  Property[]
+  @@map("landlord")
 }
 
 model Tenant {
@@ -36,6 +39,7 @@ model Tenant {
   user             User      @relation(fields: [userId], references: [id])
   property         Property  @relation(fields: [propertyId], references: [id])
   invoices         Invoice[]
+  @@map("tenant")
 }
 
 model Property {
@@ -46,6 +50,7 @@ model Property {
   landlord   Landlord @relation(fields: [landlordId], references: [id])
   units      Unit[]
   tenants    Tenant[]
+  @@map("property")
 }
 
 model Unit {
@@ -55,6 +60,7 @@ model Unit {
   status      String
   property    Property      @relation(fields: [propertyId], references: [id])
   maintenances Maintenance[]
+  @@map("unit")
 }
 
 model Maintenance {
@@ -64,6 +70,7 @@ model Maintenance {
   date        DateTime
   status      String
   unit        Unit     @relation(fields: [unitId], references: [id])
+  @@map("maintenance")
 }
 
 model Invoice {
@@ -73,10 +80,12 @@ model Invoice {
   date     DateTime
   status   String
   tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  @@map("invoice")
 }
 
 model Revenue {
   id      String @id @default(uuid())
   month   String
   revenue Int
+  @@map("revenue")
 }

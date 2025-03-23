@@ -1,217 +1,121 @@
-import { sql } from '@vercel/postgres';
-import {
-  TenantField,
-  TenantsTableType,
-  InvoiceForm,
-  InvoicesTable,
-  LatestInvoiceRaw,
-  Revenue,
-} from './types';
-import { formatCurrency } from './utils';
-
-export async function fetchRevenue() {
-  try {
-    // Artificially delay a response for demo purposes.
-    // Don't do this in production :)
-
-    // console.log('Fetching revenue data...');
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    const data = await sql<Revenue>`SELECT * FROM revenue`;
-
-    // console.log('Data fetch completed after 3 seconds.');
-
-    return data.rows;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch revenue data.');
-  }
+// Adjusting UnitData to match Prisma schema
+export interface UnitData {
+  id: string; // Matches Prisma's `id` field
+  propertyId: string; // Use camelCase if Prisma uses snake_case
+  unitNumber: string; // Matches Prisma's `unitNumber` field
+  status: 'available' | 'occupied'; // Matches Prisma's enum
 }
 
-export async function fetchLatestInvoices() {
-  try {
-    const data = await sql<LatestInvoiceRaw>`
-      SELECT invoices.amount, tenants.name, tenants.image_url, tenants.email, invoices.id
-      FROM invoices
-      JOIN tenants ON invoices.tenant_id = tenants.id
-      ORDER BY invoices.date DESC
-      LIMIT 5`;
-
-    const latestInvoices = data.rows.map((invoice) => ({
-      ...invoice,
-      amount: formatCurrency(invoice.amount),
-    }));
-    return latestInvoices;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch the latest invoices.');
-  }
+// Adjusting TenantData to match Prisma schema
+export interface TenantData {
+  id: string;
+  name: string; // Added based on fetchTenants and fetchFilteredTenants
+  email: string; // Added based on fetchFilteredTenants
+  image_url?: string; // Added based on fetchFilteredTenants
+  propertyId?: string;
+  moveInDate?: Date; // Ensure this matches Prisma's `DateTime`
+  unitOccupied?: string;
+  emergencyContact?: string;
 }
 
-export async function fetchCardData() {
-  try {
-    // You can probably combine these into a single SQL query
-    // However, we are intentionally splitting them to demonstrate
-    // how to initialize multiple queries in parallel with JS.
-    const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
-    const tenantCountPromise = sql`SELECT COUNT(*) FROM tenants`;
-    const invoiceStatusPromise = sql`SELECT
-         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
-         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
-         FROM invoices`;
+// Adjusting InvoiceValues for API routes
+export type InvoiceValues = {
+  id: string;
+  tenantId: string; // Use camelCase for consistency
+  amount: number;
+  date: Date; // Matches Prisma's `DateTime`
+  status: 'pending' | 'paid' | 'late'; // Matches Prisma's enum
+};
 
-    const data = await Promise.all([
-      invoiceCountPromise,
-      tenantCountPromise,
-      invoiceStatusPromise,
-    ]);
+// Adjusting User to match Prisma schema
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  role: 'landlord' | 'tenant'; // Matches Prisma's enum
+  createdAt: Date; // Matches Prisma's `DateTime`
+};
 
-    const numberOfInvoices = Number(data[0].rows[0].count ?? '0');
-    const numberOfTenants = Number(data[1].rows[0].count ?? '0');
-    const totalPaidInvoices = formatCurrency(data[2].rows[0].paid ?? '0');
-    const totalPendingInvoices = formatCurrency(data[2].rows[0].pending ?? '0');
+// Adjusting API-specific types
+export type CreateInvoicePayload = {
+  tenantId: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'late';
+};
 
-    return {
-      numberOfTenants,
-      numberOfInvoices,
-      totalPaidInvoices,
-      totalPendingInvoices,
-    };
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch card data.');
-  }
+export type UpdateInvoicePayload = {
+  id: string;
+  status: 'pending' | 'paid' | 'late';
+};
+
+// Adjusting InvoiceData to match Prisma schema
+export interface InvoiceData {
+  id: string;
+  tenantId: string;
+  propertyId?: string; // Optional since it's not used in data.ts
+  amount: number;
+  date: Date; // Matches Prisma's `DateTime`
+  status: 'pending' | 'paid' | 'late'; // Matches Prisma's enum
 }
 
-const ITEMS_PER_PAGE = 6;
-export async function fetchFilteredInvoices(
-  query: string,
-  currentPage: number,
-) {
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-
-  try {
-    const invoices = await sql<InvoicesTable>`
-      SELECT
-        invoices.id,
-        invoices.amount,
-        invoices.date,
-        invoices.status,
-        tenants.name,
-        tenants.email,
-        tenants.image_url
-      FROM invoices
-      JOIN tenants ON invoices.tenant_id = tenants.id
-      WHERE
-        tenants.name ILIKE ${`%${query}%`} OR
-        tenants.email ILIKE ${`%${query}%`} OR
-        invoices.amount::text ILIKE ${`%${query}%`} OR
-        invoices.date::text ILIKE ${`%${query}%`} OR
-        invoices.status ILIKE ${`%${query}%`}
-      ORDER BY invoices.date DESC
-      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
-    `;
-
-    return invoices.rows;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoices.');
-  }
+// Adjusting RevenueData for reporting
+export interface RevenueData {
+  propertyId: string;
+  totalRevenue: number;
+  month: string; // Format as 'YYYY-MM' for consistency
+  year: number;
 }
 
-export async function fetchInvoicesPages(query: string) {
-  try {
-    const count = await sql`SELECT COUNT(*)
-    FROM invoices
-    JOIN tenants ON invoices.tenant_id = tenants.id
-    WHERE
-      tenants.name ILIKE ${`%${query}%`} OR
-      tenants.email ILIKE ${`%${query}%`} OR
-      invoices.amount::text ILIKE ${`%${query}%`} OR
-      invoices.date::text ILIKE ${`%${query}%`} OR
-      invoices.status ILIKE ${`%${query}%`}
-  `;
+// Added based on fetchRevenue
+export type Revenue = {
+  propertyId: string;
+  totalRevenue: number;
+  month: string;
+  year: number;
+};
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch total number of invoices.');
-  }
-}
+// Added based on fetchLatestInvoices
+export type LatestInvoiceRaw = {
+  id: string;
+  amount: number;
+  name: string;
+  email: string;
+  image_url?: string;
+};
 
-export async function fetchInvoiceById(id: string) {
-  try {
-    const data = await sql<InvoiceForm>`
-      SELECT
-        invoices.id,
-        invoices.tenant_id,
-        invoices.amount,
-        invoices.status
-      FROM invoices
-      WHERE invoices.id = ${id};
-    `;
+// Added based on fetchInvoiceById
+export type InvoiceForm = {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'late';
+};
 
-    const invoice = data.rows.map((invoice) => ({
-      ...invoice,
-      // Convert amount from cents to dollars
-      amount: invoice.amount / 100,
-    }));
+// Added based on fetchFilteredInvoices
+export type InvoicesTable = {
+  id: string;
+  amount: number;
+  date: Date;
+  status: 'pending' | 'paid' | 'late';
+  name: string;
+  email: string;
+  image_url?: string;
+};
 
-    return invoice[0];
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoice.');
-  }
-}
+// Added based on fetchTenants
+export type TenantField = {
+  id: string;
+  name: string;
+};
 
-export async function fetchTenants() {
-  try {
-    const data = await sql<TenantField>`
-      SELECT
-        id,
-        name
-      FROM tenants
-      ORDER BY name ASC
-    `;
-
-    const tenants = data.rows;
-    return tenants;
-  } catch (err) {
-    console.error('Database Error:', err);
-    throw new Error('Failed to fetch all tenants.');
-  }
-}
-
-export async function fetchFilteredTenants(query: string) {
-  try {
-    const data = await sql<TenantsTableType>`
-		SELECT
-		  tenants.id,
-		  tenants.name,
-		  tenants.email,
-		  tenants.image_url,
-		  COUNT(invoices.id) AS total_invoices,
-		  SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-		  SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-		FROM tenants
-		LEFT JOIN invoices ON tenants.id = invoices.tenant_id
-		WHERE
-		  tenants.name ILIKE ${`%${query}%`} OR
-        tenants.email ILIKE ${`%${query}%`}
-		GROUP BY tenants.id, tenants.name, tenants.email, tenants.image_url
-		ORDER BY tenants.name ASC
-	  `;
-
-    const tenants = data.rows.map((tenant) => ({
-      ...tenant,
-      total_pending: formatCurrency(tenant.total_pending),
-      total_paid: formatCurrency(tenant.total_paid),
-    }));
-
-    return tenants;
-  } catch (err) {
-    console.error('Database Error:', err);
-    throw new Error('Failed to fetch tenant table.');
-  }
-}
+// Added based on fetchFilteredTenants
+export type TenantsTableType = {
+  id: string;
+  name: string;
+  email: string;
+  image_url?: string;
+  total_invoices: number;
+  total_pending: number;
+  total_paid: number;
+};

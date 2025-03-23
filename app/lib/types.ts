@@ -9,11 +9,13 @@ export interface UnitData {
 // Example: Adjusting TenantData to match Prisma schema
 export interface TenantData {
   id: string;
-  userId: string; // Use camelCase for consistency
-  propertyId: string;
-  moveInDate: Date; // Ensure this matches Prisma's `DateTime`
-  unitOccupied: string;
-  emergencyContact: string;
+  name: string; // Added based on fetchTenants and fetchFilteredTenants
+  email: string; // Added based on fetchFilteredTenants
+  image_url?: string; // Added based on fetchFilteredTenants
+  propertyId?: string;
+  moveInDate?: Date; // Ensure this matches Prisma's `DateTime`
+  unitOccupied?: string;
+  emergencyContact?: string;
 }
 
 // Example: Adjusting InvoiceValues for API routes
@@ -22,7 +24,7 @@ export type InvoiceValues = {
   tenantId: string; // Use camelCase for consistency
   amount: number;
   date: Date; // Matches Prisma's `DateTime`
-  status: 'pending' | 'paid'; // Matches Prisma's enum
+  status: 'pending' | 'paid' | 'late'; // Matches Prisma's enum
 };
 
 // Example: Adjusting User to match Prisma schema
@@ -46,11 +48,12 @@ export type UpdateInvoicePayload = {
   id: string;
   status: 'pending' | 'paid' | 'late';
 };
+
 // Example: Adjusting InvoiceData to match Prisma schema
 export interface InvoiceData {
   id: string;
   tenantId: string;
-  propertyId: string;
+  propertyId?: string; // Optional since it's not used in data.ts
   amount: number;
   date: Date; // Matches Prisma's `DateTime`
   status: 'pending' | 'paid' | 'late'; // Matches Prisma's enum
@@ -63,3 +66,56 @@ export interface RevenueData {
   month: string; // Format as 'YYYY-MM' for consistency
   year: number;
 }
+
+// Added based on fetchRevenue
+export type Revenue = {
+  propertyId: string;
+  totalRevenue: number;
+  month: string;
+  year: number;
+};
+
+// Added based on fetchLatestInvoices
+export type LatestInvoiceRaw = {
+  id: string;
+  amount: number;
+  name: string;
+  email: string;
+  image_url?: string;
+};
+
+// Added based on fetchInvoiceById
+export type InvoiceForm = {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'late';
+};
+
+// Added based on fetchFilteredInvoices
+export type InvoicesTable = {
+  id: string;
+  amount: number;
+  date: Date;
+  status: 'pending' | 'paid' | 'late';
+  name: string;
+  email: string;
+  image_url?: string;
+};
+
+// Added based on fetchTenants
+export type TenantField = {
+  id: string;
+  name: string;
+};
+
+// Added based on fetchFilteredTenants
+export type TenantsTableType = {
+  id: string;
+  name: string;
+  email: string;
+  image_url?: string;
+  total_invoices: number;
+  total_pending: number;
+  total_paid: number;
+};

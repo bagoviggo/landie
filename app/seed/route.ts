@@ -1,11 +1,11 @@
 // app/seed/route.ts
 import { PrismaClient, Prisma } from '@prisma/client';
-import { randUuid, randFullName, randEmail, randAvatar, randAddress, randPastDate, randPhoneNumber } from '@ngneat/falso';
-import type { UnitData, TenantData, InvoiceData, RevenueData } from '../lib/types'; 
+import { randUuid, randFullName, randEmail, randAddress, randPastDate, randPhoneNumber } from '@ngneat/falso';
+import type { UnitData, TenantData, InvoiceData } from '../lib/types'; 
 
 const prisma = new PrismaClient();
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Seed Users
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         id: randUuid(),
         name: randFullName(),
         email: randEmail(),
-        password: 'hashed_password', // Placeholder for password
+        hashedPassword: '$2a$10$dqyYw5XovLjpmkYNiRDEWuwKaRAvLaG45fnXE5b3KTccKZcRPka2m', // "password" - pre-hashed for demo
         role: Math.random() < 0.5 ? 'landlord' : 'tenant',
         createdAt: new Date(),
       }));
@@ -48,14 +48,21 @@ export async function GET(request: Request) {
 
       // Seed Tenants
       const tenantUsers = userData.filter(user => user.role === 'tenant');
-      const tenantData: TenantData[] = tenantUsers.map(user => ({
-        id: randUuid(),
-        userId: user.id,
-        propertyId: propertyData[Math.floor(Math.random() * propertyData.length)].id,
-        moveInDate: randPastDate(),
-        unitOccupied: unitData[Math.floor(Math.random() * unitData.length)].id,
-        emergencyContact: randPhoneNumber(),
-      }));
+      const occupiedUnits = unitData.filter(unit => unit.status === 'occupied');
+      
+      const tenantData = tenantUsers.map((user, index) => {
+        // Make sure we don't run out of units
+        const unitIndex = index % occupiedUnits.length;
+        return {
+          id: randUuid(),
+          userId: user.id,
+          propertyId: propertyData[Math.floor(Math.random() * propertyData.length)].id,
+          moveInDate: randPastDate(),
+          unitOccupied: occupiedUnits[unitIndex].id,
+          emergencyContact: randPhoneNumber(),
+        };
+      });
+      
       await tx.tenant.createMany({ data: tenantData });
 
       // Seed Maintenance Requests
@@ -69,25 +76,23 @@ export async function GET(request: Request) {
       await tx.maintenance.createMany({ data: maintenanceData });
 
       // Seed Invoices
-      const invoiceData: InvoiceData[] = Array.from({ length: 20 }, () => ({
+      const invoiceData = Array.from({ length: 20 }, () => ({
         id: randUuid(),
         tenantId: tenantData[Math.floor(Math.random() * tenantData.length)].id,
-        propertyId: propertyData[Math.floor(Math.random() * propertyData.length)].id,
         amount: Math.floor(Math.random() * 900) + 100,
         date: randPastDate(),
         status: Math.random() < 0.5 ? 'pending' : 'paid',
       }));
       await tx.invoice.createMany({ data: invoiceData });
 
-      // Seed Revenue
-      const revenueData: RevenueData[] = Array.from({ length: 12 }, (_, index) => ({
-        propertyId: propertyData[Math.floor(Math.random() * propertyData.length)].id,
-        totalRevenue: Math.floor(Math.random() * 50000) + 10000,
+      // Seed Revenue - updated to match schema
+      const revenueData = Array.from({ length: 12 }, (_, index) => ({
+        id: randUuid(),
         month: new Date(2024, index).toISOString().slice(0, 7), // Format as 'YYYY-MM'
-        year: 2024,
+        revenue: Math.floor(Math.random() * 50000) + 10000,
       }));
+      
       await tx.revenue.createMany({ data: revenueData });
-
     });
 
     return new Response(JSON.stringify({ message: 'Database seeded successfully' }), { status: 200 });

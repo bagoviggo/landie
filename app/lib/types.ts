@@ -1,4 +1,4 @@
-// Example: Adjusting UnitData to match Prisma schema
+// Adjusting UnitData to match Prisma schema
 export interface UnitData {
   id: string; // Matches Prisma's `id` field
   propertyId: string; // Use camelCase if Prisma uses snake_case
@@ -6,7 +6,7 @@ export interface UnitData {
   status: 'available' | 'occupied'; // Matches Prisma's enum
 }
 
-// Example: Adjusting TenantData to match Prisma schema
+// Adjusting TenantData to match Prisma schema
 export interface TenantData {
   id: string;
   name: string; // Added based on fetchTenants and fetchFilteredTenants
@@ -18,7 +18,7 @@ export interface TenantData {
   emergencyContact?: string;
 }
 
-// Example: Adjusting InvoiceValues for API routes
+// Adjusting InvoiceValues for API routes
 export type InvoiceValues = {
   id: string;
   tenantId: string; // Use camelCase for consistency
@@ -27,7 +27,7 @@ export type InvoiceValues = {
   status: 'pending' | 'paid' | 'late'; // Matches Prisma's enum
 };
 
-// Example: Adjusting User to match Prisma schema
+// Adjusting User to match Prisma schema
 export type User = {
   id: string;
   name: string;
@@ -37,7 +37,7 @@ export type User = {
   createdAt: Date; // Matches Prisma's `DateTime`
 };
 
-// Example: Adjusting API-specific types
+// Adjusting API-specific types
 export type CreateInvoicePayload = {
   tenantId: string;
   amount: number;
@@ -49,7 +49,7 @@ export type UpdateInvoicePayload = {
   status: 'pending' | 'paid' | 'late';
 };
 
-// Example: Adjusting InvoiceData to match Prisma schema
+// Adjusting InvoiceData to match Prisma schema
 export interface InvoiceData {
   id: string;
   tenantId: string;
@@ -59,7 +59,7 @@ export interface InvoiceData {
   status: 'pending' | 'paid' | 'late'; // Matches Prisma's enum
 }
 
-// Example: Adjusting RevenueData for reporting
+// Adjusting RevenueData for reporting
 export interface RevenueData {
   propertyId: string;
   totalRevenue: number;

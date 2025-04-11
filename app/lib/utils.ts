@@ -1,4 +1,7 @@
-import { Revenue } from './types';
+import { PrismaClient } from '@prisma/client';
+// Prisma client already has your schema types defined
+
+const prisma = new PrismaClient();
 
 export const formatCurrency = (amount: number) => {
   return (amount / 100).toLocaleString('en-US', {
@@ -21,7 +24,8 @@ export const formatDateToLocal = (
   return formatter.format(date);
 };
 
-export const generateYAxis = (revenue: Revenue[]) => {
+// Using Prisma's type for revenue data
+export const generateYAxis = (revenue: { revenue: number }[]) => {
   // Calculate what labels we need to display on the y-axis
   // based on highest record and in 1000s
   const yAxisLabels = [];
@@ -32,10 +36,7 @@ export const generateYAxis = (revenue: Revenue[]) => {
     yAxisLabels.push(`$${i / 1000}K`);
   }
 
-  // Set the height of the y-axis to approximately 400px
-  const height = 400;
-
-  return { yAxisLabels, topLabel, height };
+  return { yAxisLabels, topLabel };
 };
 
 export const generatePagination = (currentPage: number, totalPages: number) => {

@@ -1,23 +1,30 @@
 // app/seed/route.ts
 import { PrismaClient, Prisma } from '@prisma/client';
 import { randUuid, randFullName, randEmail, randAddress, randPastDate, randPhoneNumber } from '@ngneat/falso';
-import type { UnitData, TenantData, InvoiceData } from '../lib/types'; 
+import type { UnitData } from '../lib/types'; 
+import * as bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient();
 
 export async function GET(_request: Request) {
   try {
+    const hashedPassword = await bcrypt.hash('password', 10);
+
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Seed Users
-      const userData = Array.from({ length: 10 }, () => ({
+      // Generate unique emails by adding an index
+      const userData = Array.from({ length: 10 }, (_, index) => ({
         id: randUuid(),
         name: randFullName(),
-        email: randEmail(),
-        hashedPassword: '$2a$10$dqyYw5XovLjpmkYNiRDEWuwKaRAvLaG45fnXE5b3KTccKZcRPka2m', // "password" - pre-hashed for demo
+        email: randEmail(), // Add index to ensure uniqueness
+        hashedPassword: hashedPassword,
         role: Math.random() < 0.5 ? 'landlord' : 'tenant',
         createdAt: new Date(),
       }));
+      
+      console.log(`Attempting to create ${userData.length} users`);
       await tx.user.createMany({ data: userData });
+      console.log(`Users created successfully`);
 
       // Seed Landlords
       const landlordUsers = userData.filter(user => user.role === 'landlord').slice(0, 3);
@@ -50,7 +57,7 @@ export async function GET(_request: Request) {
       const tenantUsers = userData.filter(user => user.role === 'tenant');
       const occupiedUnits = unitData.filter(unit => unit.status === 'occupied');
       
-      const tenantData = tenantUsers.map((user, index) => {
+      const tenantData: any[] = tenantUsers.map((user, index) => {
         // Make sure we don't run out of units
         const unitIndex = index % occupiedUnits.length;
         return {
@@ -76,7 +83,7 @@ export async function GET(_request: Request) {
       await tx.maintenance.createMany({ data: maintenanceData });
 
       // Seed Invoices
-      const invoiceData = Array.from({ length: 20 }, () => ({
+      const invoiceData: any[] = Array.from({ length: 20 }, () => ({
         id: randUuid(),
         tenantId: tenantData[Math.floor(Math.random() * tenantData.length)].id,
         amount: Math.floor(Math.random() * 900) + 100,

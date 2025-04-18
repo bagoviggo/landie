@@ -15,21 +15,21 @@ import { formatCurrency } from './utils';
 // Configure local database connection
 // These can also be set as environment variables
 const localDbConfig = {
-  connectionString: process.env.POSTGRES_URL,
+  connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   max: 5, // Maximum number of clients in the pool
   connectionTimeoutMillis: 10000, // Connection timeout
 };
 
 // Log connection info for debugging (remove in production)
-console.log('Database connection string exists:', !!process.env.POSTGRES_URL);
+console.log('Database connection string exists:', !!process.env.DATABASE_URL);
 
 // Create a custom pool for local development
 const db = createPool(localDbConfig);
 
 // Helper function to execute SQL queries
 async function executeQuery(query: string, params: any[] = []) {
-  if (!process.env.POSTGRES_URL) {
+  if (!process.env.DATABASE_URL) {
     console.error('Database connection string not provided');
     throw new Error('Database connection string not provided');
   }
@@ -47,23 +47,17 @@ const ITEMS_PER_PAGE = 6;
 
 export async function fetchRevenue() {
   try {
-    // Check if table exists first
-    const tableCheck = await executeQuery(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'revenue'
-      );
+    const data = await executeQuery(`
+      SELECT month, SUM(revenue) AS total_revenue
+      FROM revenue
+      GROUP BY month
+      ORDER BY month ASC
+      LIMIT 12
     `);
-    
-    if (!tableCheck.rows[0].exists) {
-      console.error('Table "revenue" does not exist in the database');
-      return [];
-    }
-    
-    const data = await executeQuery('SELECT * FROM revenue');
-    console.log('Revenue data fetched:', data.rows.length, 'rows');
-    return data.rows;
+    console.log('Revenue data fetched:', data.rows);
+
+    // Reverse the data to display the oldest month first
+    return data.rows.reverse();
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to fetch revenue data.');

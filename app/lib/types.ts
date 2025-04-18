@@ -69,6 +69,7 @@ export interface RevenueData {
 
 // Added based on fetchRevenue
 export type Revenue = {
+  revenue: number;
   propertyId: string;
   totalRevenue: number;
   month: string;

@@ -26,13 +26,12 @@ export const formatDateToLocal = (
 
 // Using Prisma's type for revenue data
 export const generateYAxis = (revenue: { revenue: number }[]) => {
-  // Calculate what labels we need to display on the y-axis
-  // based on highest record and in 1000s
   const yAxisLabels = [];
   const highestRecord = Math.max(...revenue.map((month) => month.revenue));
-  const topLabel = Math.ceil(highestRecord / 1000) * 1000;
+  const interval = Math.ceil(highestRecord / 5 / 1000) * 1000; // Divide into 5 intervals, rounded to the nearest 1000
+  const topLabel = Math.ceil(highestRecord / interval) * interval; // Round up to the nearest interval
 
-  for (let i = topLabel; i >= 0; i -= 1000) {
+  for (let i = 0; i <= topLabel; i += interval) {
     yAxisLabels.push(`$${i / 1000}K`);
   }
 
@@ -70,4 +69,15 @@ export const generatePagination = (currentPage: number, totalPages: number) => {
     '...',
     totalPages,
   ];
+};
+
+export const formatMonth = (month: { month: string }) => {
+  if (!/^\d{4}-\d{2}$/.test(month.month)) {
+    console.error(`Invalid month format: ${month.month}`);
+    return 'Invalid';
+  }
+
+  return new Date(`${month.month}-01`).toLocaleDateString('en-US', {
+    month: 'short',
+  });
 };

@@ -1,3 +1,5 @@
+'use client';
+import { motion } from 'framer-motion';
 import LandieLogo from '@/app/ui/landie-logo';
 import { ArrowRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
@@ -6,85 +8,147 @@ import Image from 'next/image';
 
 export default function Page() {
   return (
-    <main className="flex min-h-screen flex-col p-6 overflow-hidden bg-gray-100">
-      <header className="flex h-16 md:h-20 items-center justify-between rounded-lg bg-blue-950 px-6 md:px-12">
-        <LandieLogo />
-        <nav className="hidden md:flex gap-6 text-white">
-          <Link href="/features" className="hover:underline">Features</Link>
-          <Link href="/pricing" className="hover:underline">Pricing</Link>
-          <Link href="/contact" className="hover:underline">Contact</Link>
-        </nav>
-      </header>
-      <section className="flex grow flex-col md:flex-row">
-        <article className="flex flex-col justify-center gap-6 p-6 md:w-2/5 md:px-12">
-          <h1 className={`${lusitana.className} text-2xl text-gray-800 md:text-4xl`}>
-            <strong>Welcome to Landie</strong>
-          </h1>
-          <p className="text-gray-600">
-            <span className="flex items-center gap-2">
-              <CheckCircleIcon className="w-5 h-5 text-blue-500" />
-              All-in-one property management solution
-            </span>
-          </p>
-          <p className="text-gray-600">
-            <span className="flex items-center gap-2">
-              <CheckCircleIcon className="w-5 h-5 text-blue-500" />
-              Real-time payment tracking
-            </span>
-          </p>
-          <p className="text-gray-600">
-            <span className="flex items-center gap-2">
-              <CheckCircleIcon className="w-5 h-5 text-blue-500" />
-              Simplified maintenance management
-            </span>
-          </p>
+    <main className="flex min-h-screen flex-col bg-gradient-to-b from-gray-100 to-gray-200">
+      {/* Header */}
+      <header className="flex h-16 z-10 md:h-20 items-center bg-blue-950 px-6 md:px-12 shadow-lg">
+          <div className="flex-shrink-0 h-full">
+            <LandieLogo />
+          </div>
+
+          <nav className="flex flex-1 justify-center gap-6 text-white">
+            <Link href="/features" className="hover:underline">Features</Link>
+            <Link href="/pricing" className="hover:underline">Pricing</Link>
+            <Link href="/contact" className="hover:underline">Contact</Link>
+          </nav>
+
+        <div className='flex items-center gap-4 ml-auto'>       
           <Link
             href="/login"
-            className="flex items-center gap-5 self-start rounded-lg bg-blue-950 px-6 py-3 text-sm font-medium text-white transition-transform transform hover:scale-105 md:text-base"
-            aria-label="Log in to Landie"
+            className="hidden md:inline-block rounded-lg bg-transparent border border-white text-white px-4 py-2 text-sm font-medium hover:bg-white hover:text-blue-950"
           >
-            <span>Log in</span> <ArrowRightIcon className="w-5 md:w-6" />
+            Log In
           </Link>
-        </article>
-        <div className="relative flex items-center justify-center md:w-3/5">
+          <Link
+            href="/signup"
+            className="hidden md:inline-block rounded-lg bg-white text-blue-950 px-4 py-2 text-sm font-medium hover:bg-gray-200"
+          >
+            Sign Up
+          </Link>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative flex flex-col-reverse md:flex-row items-center justify-between px-6 -mt-16 md:px-12 py-12">
+        {/* Text Content */}
+        <motion.div
+          className="flex flex-col items-start gap-6 md:w-1/2"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h2 className={`${lusitana.className} text-3xl md:text-5xl font-bold text-gray-800`}>
+            Why Choose Landie?
+          </h2>
+          <p className="text-lg text-gray-600">
+            All-in-one property management solution designed to simplify your life.
+          </p>
+          <ul className="space-y-4">
+            <li className="flex items-start gap-4">
+              <CheckCircleIcon className="w-8 h-8 text-blue-500" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Streamlined Operations</h3>
+                <p className="text-gray-600">
+                  Manage your properties effortlessly with our intuitive dashboard and tools.
+                </p>
+              </div>
+            </li>
+            <li className="flex items-start gap-4">
+              <CheckCircleIcon className="w-8 h-8 text-blue-500" />
+              <div>
+                <h3 className='text-lg font-semibold text-gray-800'>Secure Payments</h3>
+                <p className="text-gray-600">
+                  Track payments in real-time with our secure and reliable system.
+                </p>
+              </div>
+            </li>
+            <li className="flex items-start gap-4">
+              <CheckCircleIcon className="w-8 h-8 text-blue-500" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">24/7 Support</h3>
+                <p className="text-gray-600">
+                  Get assistance whenever you need it with our dedicated support team.
+                </p>
+              </div>
+            </li>
+          </ul>
+          <Link
+            href="/get-started"
+            className="mt-6 inline-block rounded-lg bg-blue-950 px-6 py-3 text-white text-sm font-medium transition-transform transform hover:scale-105"
+          >
+            Get Started
+          </Link>
+        </motion.div>
+
+        {/* Hero Image */}
+        <motion.div
+          className="relative md:w-1/2"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+        >
           <Image
             src="/hero-desktop.png"
-            sizes="(min-width:768px) 60vw, 100vw"
-            width={1000}
-            height={760}
-            className="hidden md:block object-cover rounded-lg shadow-lg"
-            alt="Hexagonal images of apartment buildings"
+            alt="Stylish apartment buildings"
+            width={570}
+            height={500}
+            className="rounded-lg shadow-lg object-cover"
           />
-          <Image
-            src="/hero-mobile.png"
-            width={560}
-            height={620}
-            sizes="100vw"
-            className="block md:hidden object-cover rounded-lg shadow-lg"
-            alt="Hexagonal images of apartment buildings"
-          />
-        </div>
+          <div className="absolute -top-6 -left-6 w-24 h-24 bg-blue-500 rounded-full opacity-20"></div>
+          <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-300 rounded-full opacity-20"></div>
+        </motion.div>
       </section>
-      <section className="mt-8 p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-xl font-semibold text-gray-800 md:text-2xl">Why Choose Landie?</h2>
-        <div className="mt-4 grid gap-6 md:grid-cols-3">
-          <div className="flex flex-col items-center text-center">
-            <CheckCircleIcon className="w-10 h-10 text-blue-500" />
-            <h3 className="mt-2 text-lg font-medium text-gray-800">Ease of Use</h3>
-            <p className="text-gray-600">Manage properties effortlessly with our intuitive interface.</p>
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <CheckCircleIcon className="w-10 h-10 text-blue-500" />
-            <h3 className="mt-2 text-lg font-medium text-gray-800">Secure Payments</h3>
-            <p className="text-gray-600">Track payments securely in real-time.</p>
-          </div>
-          <div className="flex flex-col items-center text-center">
-            <CheckCircleIcon className="w-10 h-10 text-blue-500" />
-            <h3 className="mt-2 text-lg font-medium text-gray-800">24/7 Support</h3>
-            <p className="text-gray-600">Get assistance whenever you need it.</p>
-          </div>
-        </div>
+
+      {/* Call-to-Action Section */}
+      <section className="mt-12 px-6 md:px-12 py-8 bg-blue-950 text-white text-center rounded-lg shadow-lg">
+        <motion.h2
+          className="text-2xl md:text-3xl font-semibold"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          Ready to Get Started?
+        </motion.h2>
+        <motion.p
+          className="mt-4 text-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        >
+          Sign up today and experience the future of property management.
+        </motion.p>
+        <motion.div
+          className="mt-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        >
+          <Link
+            href="/signup"
+            className="inline-block rounded-lg bg-white text-blue-950 px-6 py-3 text-sm font-medium transition-transform transform hover:scale-105"
+          >
+            Sign Up Now
+          </Link>
+        </motion.div>
       </section>
+
+      {/* Footer */}
+      <footer className="mt-12 px-6 md:px-12 py-4 bg-gray-800 text-white text-center">
+        <p>&copy; 2025 Landie. All rights reserved.</p>
+        <nav className="mt-2">
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link> | 
+          <Link href="/terms" className="hover:underline">Terms of Service</Link>
+        </nav>
+      </footer>
     </main>
   );
 }

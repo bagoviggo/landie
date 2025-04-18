@@ -96,7 +96,7 @@ export async function GET(_request: Request) {
       const revenueData = Array.from({ length: 12 }, (_, index) => ({
         id: randUuid(),
         month: new Date(2024, index).toISOString().slice(0, 7), // Format as 'YYYY-MM'
-        revenue: Math.floor(Math.random() * 50000) + 10000,
+        revenue: Math.floor(Math.random() * 50000) + 10000, // Random revenue between 10k and 50k
       }));
       
       await tx.revenue.createMany({ data: revenueData });

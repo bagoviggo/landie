@@ -71,24 +71,24 @@ export async function fetchLatestInvoices() {
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public'
-        AND table_name = 'invoices'
+        AND table_name = 'invoice'
       ) AND EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public'
-        AND table_name = 'tenants'
+        AND table_name = 'tenant'
       );
     `);
     
     if (!tableCheck.rows[0].exists) {
-      console.error('Tables "invoices" or "tenants" do not exist in the database');
+      console.error('Tables "invoice" or "tenant" do not exist in the database');
       return [];
     }
     
     const data = await executeQuery(`
-      SELECT invoices.amount, tenants.name, tenants.image_url, tenants.email, invoices.id
-      FROM invoices
-      JOIN tenants ON invoices.tenant_id = tenants.id
-      ORDER BY invoices.date DESC
+      SELECT invoice.amount, tenant.name, tenant.image_url, tenant.email, invoice.id
+      FROM invoice
+      JOIN tenant ON invoice.tenant_id = tenant.id
+      ORDER BY invoice.date DESC
       LIMIT 5
     `);
 
@@ -108,13 +108,13 @@ export async function fetchCardData() {
   try {
     // Run multiple queries in parallel
     const [invoiceCount, tenantCount, invoiceStatus] = await Promise.all([
-      executeQuery('SELECT COUNT(*) FROM invoices'),
-      executeQuery('SELECT COUNT(*) FROM tenants'),
+      executeQuery('SELECT COUNT(*) FROM invoice'),
+      executeQuery('SELECT COUNT(*) FROM tenant'),
       executeQuery(`SELECT
         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending",
         SUM(CASE WHEN status = 'late' THEN amount ELSE 0 END) AS "late"
-        FROM invoices`)
+        FROM invoice`)
     ]);
 
     const numberOfInvoices = Number(invoiceCount.rows[0].count ?? '0');
@@ -145,22 +145,22 @@ export async function fetchFilteredInvoices(
   try {
     const invoices = await executeQuery(`
       SELECT
-        invoices.id,
-        invoices.amount,
-        invoices.date,
-        invoices.status,
-        tenants.name,
-        tenants.email,
-        tenants.image_url
-      FROM invoices
-      JOIN tenants ON invoices.tenant_id = tenants.id
+        invoice.id,
+        invoice.amount,
+        invoice.date,
+        invoice.status,
+        tenant.name,
+        tenant.email,
+        tenant.image_url
+      FROM invoice
+      JOIN tenant ON invoice.tenant_id = tenant.id
       WHERE
-        tenants.name ILIKE $1 OR
-        tenants.email ILIKE $1 OR
-        invoices.amount::text ILIKE $1 OR
-        invoices.date::text ILIKE $1 OR
-        invoices.status ILIKE $1
-      ORDER BY invoices.date DESC
+        tenant.name ILIKE $1 OR
+        tenant.email ILIKE $1 OR
+        invoice.amount::text ILIKE $1 OR
+        invoice.date::text ILIKE $1 OR
+        invoice.status ILIKE $1
+      ORDER BY invoice.date DESC
       LIMIT ${ITEMS_PER_PAGE} OFFSET $2
     `, [`%${query}%`, offset]);
 
@@ -175,14 +175,14 @@ export async function fetchInvoicesPages(query: string) {
   try {
     const count = await executeQuery(`
       SELECT COUNT(*)
-      FROM invoices
-      JOIN tenants ON invoices.tenant_id = tenants.id
+      FROM invoice
+      JOIN tenant ON invoice.tenant_id = tenant.id
       WHERE
-        tenants.name ILIKE $1 OR
-        tenants.email ILIKE $1 OR
-        invoices.amount::text ILIKE $1 OR
-        invoices.date::text ILIKE $1 OR
-        invoices.status ILIKE $1
+        tenant.name ILIKE $1 OR
+        tenant.email ILIKE $1 OR
+        invoice.amount::text ILIKE $1 OR
+        invoice.date::text ILIKE $1 OR
+        invoice.status ILIKE $1
     `, [`%${query}%`]);
 
     const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
@@ -197,12 +197,12 @@ export async function fetchInvoiceById(id: string) {
   try {
     const data = await executeQuery(`
       SELECT
-        invoices.id,
-        invoices.tenant_id,
-        invoices.amount,
-        invoices.status
-      FROM invoices
-      WHERE invoices.id = $1
+        invoice.id,
+        invoice.tenant_id,
+        invoice.amount,
+        invoice.status
+      FROM invoice
+      WHERE invoice.id = $1
     `, [id]);
 
     const invoice = data.rows.map((invoice) => ({
@@ -224,7 +224,7 @@ export async function fetchTenants() {
       SELECT
         id,
         name
-      FROM tenants
+      FROM tenant
       ORDER BY name ASC
     `);
 
@@ -240,20 +240,20 @@ export async function fetchFilteredTenants(query: string) {
   try {
     const data = await executeQuery(`
       SELECT
-        tenants.id,
-        tenants.name,
-        tenants.email,
-        tenants.image_url,
-        COUNT(invoices.id) AS total_invoices,
-        SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-        SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-      FROM tenants
-      LEFT JOIN invoices ON tenants.id = invoices.tenant_id
+        tenant.id,
+        tenant.name,
+        tenant.email,
+        tenant.image_url,
+        COUNT(invoice.id) AS total_invoices,
+        SUM(CASE WHEN invoice.status = 'pending' THEN invoice.amount ELSE 0 END) AS total_pending,
+        SUM(CASE WHEN invoice.status = 'paid' THEN invoice.amount ELSE 0 END) AS total_paid
+      FROM tenant
+      LEFT JOIN invoice ON tenant.id = invoice.tenant_id
       WHERE
-        tenants.name ILIKE $1 OR
-        tenants.email ILIKE $1
-      GROUP BY tenants.id, tenants.name, tenants.email, tenants.image_url
-      ORDER BY tenants.name ASC
+        tenant.name ILIKE $1 OR
+        tenant.email ILIKE $1
+      GROUP BY tenant.id, tenant.name, tenant.email, tenant.image_url
+      ORDER BY tenant.name ASC
     `, [`%${query}%`]);
 
     const tenants = data.rows.map((tenant) => ({

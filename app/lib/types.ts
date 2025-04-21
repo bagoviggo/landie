@@ -81,6 +81,7 @@ export type LatestInvoiceRaw = {
   id: string;
   amount: number;
   name: string;
+  phone: string;
   email: string;
   image_url?: string;
 };

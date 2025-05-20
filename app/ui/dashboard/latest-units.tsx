@@ -3,6 +3,8 @@ import clsx from 'clsx';
 import Image from 'next/image';
 import { lusitana } from '@/app/ui/fonts';
 import { LatestInvoiceRaw } from '@/app/lib/types';
+
+
 export default async function LatestInvoices({
   latestInvoices,
 }: {

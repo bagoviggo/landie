@@ -121,3 +121,14 @@ export type TenantsTableType = {
   total_pending: number;
   total_paid: number;
 };
+
+// Added for formatted tenants table
+export type FormattedTenantsTable = {
+  id: string;
+  name: string;
+  email: string;
+  imageUrl?: string; // Renamed for camelCase consistency
+  totalInvoices: number; // Renamed for camelCase consistency
+  totalPending: number; // Renamed for camelCase consistency
+  totalPaid: number; // Renamed for camelCase consistency
+};

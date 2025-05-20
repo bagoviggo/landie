@@ -30,16 +30,16 @@ export default async function TenantsTable({
                     <div className="flex items-center justify-between border-b pb-4">
                       <div>
                         <div className="mb-2 flex items-center">
-                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3">
                             <Image
-                              src={tenant.image_url}
+                              src={tenant.imageUrl || '/default-profile.png'}
                               className="rounded-full"
                               alt={`${tenant.name}'s profile picture`}
                               width={28}
                               height={28}
                             />
                             <p>{tenant.name}</p>
-                          </div>
+                            </div>
                         </div>
                         <p className="text-sm text-gray-500">
                           {tenant.email}
@@ -49,15 +49,15 @@ export default async function TenantsTable({
                     <div className="flex w-full items-center justify-between border-b py-5">
                       <div className="flex w-1/2 flex-col">
                         <p className="text-xs">Pending</p>
-                        <p className="font-medium">{tenant.total_pending}</p>
+                        <p className="font-medium">{tenant.totalPending}</p>
                       </div>
                       <div className="flex w-1/2 flex-col">
                         <p className="text-xs">Paid</p>
-                        <p className="font-medium">{tenant.total_paid}</p>
+                        <p className="font-medium">{tenant.totalPaid}</p>
                       </div>
                     </div>
                     <div className="pt-4 text-sm">
-                      <p>{tenant.total_invoices} invoices</p>
+                      <p>{tenant.totalInvoices} invoices</p>
                     </div>
                   </div>
                 ))}
@@ -89,11 +89,11 @@ export default async function TenantsTable({
                       <td className="whitespace-nowrap bg-white py-5 pl-4 pr-3 text-sm text-black group-first-of-type:rounded-md group-last-of-type:rounded-md sm:pl-6">
                         <div className="flex items-center gap-3">
                           <Image
-                            src={tenant.image_url}
-                            className="rounded-full"
-                            alt={`${tenant.name}'s profile picture`}
-                            width={28}
-                            height={28}
+                          src={tenant.imageUrl || '/default-profile.png'}
+                          className="rounded-full"
+                          alt={`${tenant.name}'s profile picture`}
+                          width={28}
+                          height={28}
                           />
                           <p>{tenant.name}</p>
                         </div>
@@ -102,13 +102,13 @@ export default async function TenantsTable({
                         {tenant.email}
                       </td>
                       <td className="whitespace-nowrap bg-white px-4 py-5 text-sm">
-                        {tenant.total_invoices}
+                        {tenant.totalInvoices}
                       </td>
                       <td className="whitespace-nowrap bg-white px-4 py-5 text-sm">
-                        {tenant.total_pending}
+                        {tenant.totalPending}
                       </td>
                       <td className="whitespace-nowrap bg-white px-4 py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md">
-                        {tenant.total_paid}
+                        {tenant.totalPaid}
                       </td>
                     </tr>
                   ))}

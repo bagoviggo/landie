@@ -3,10 +3,18 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const formatCurrency = (amount: number) => {
-  return (amount / 100).toLocaleString('en-US', {
+export const formatCurrency = (
+  amount: number,
+  currency: 'USD' | 'KES' = 'USD',
+) => {
+  const rate = currency === 'KES' ? 138.5 : 1; // Example exchange rate
+  const value = amount * rate;
+
+  return value.toLocaleString('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
 };
 

@@ -1,10 +1,15 @@
 'use client';
 
 import { useCurrency } from '@/app/context/currency-context';
+import { formatCurrency } from '@/app/lib/utils';
 
-export default function CurrencySwitch() {
+export default function CurrencyDisplay({ amount }: { amount: number }) {
+  const { currency } = useCurrency();
+  return <span>{formatCurrency(amount, currency)}</span>;
+}
+
+export function CurrencyToggle() {
   const { currency, toggleCurrency } = useCurrency();
-  
   return (
     <button
       onClick={toggleCurrency}

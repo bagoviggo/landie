@@ -10,7 +10,8 @@ import {
   TenantsTableType,
   TenantField
 } from './types';
-import { formatCurrency } from './utils';
+import { useCurrency } from '@/app/context/currency-context';
+import { formatCurrency } from '@/app/lib/utils';
 
 // Configure local database connection
 // These can also be set as environment variables
@@ -106,29 +107,25 @@ export async function fetchLatestInvoices() {
 
 export async function fetchCardData() {
   try {
-    // Run multiple queries in parallel
     const [invoiceCount, tenantCount, invoiceStatus] = await Promise.all([
       executeQuery('SELECT COUNT(*) FROM invoice'),
       executeQuery('SELECT COUNT(*) FROM tenant'),
       executeQuery(`SELECT
         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
-        SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending",
-        SUM(CASE WHEN status = 'late' THEN amount ELSE 0 END) AS "late"
+        SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
         FROM invoice`)
     ]);
 
     const numberOfInvoices = Number(invoiceCount.rows[0].count ?? '0');
     const numberOfTenants = Number(tenantCount.rows[0].count ?? '0');
-    const totalPaidInvoices = formatCurrency(invoiceStatus.rows[0].paid ?? '0');
-    const totalPendingInvoices = formatCurrency(invoiceStatus.rows[0].pending ?? '0');
-    const totalLateInvoices = formatCurrency(invoiceStatus.rows[0].late ?? '0');
+    const totalPaidInvoices = invoiceStatus.rows[0].paid ?? 0;
+    const totalPendingInvoices = invoiceStatus.rows[0].pending ?? 0;
 
     return {
       numberOfTenants,
       numberOfInvoices,
       totalPaidInvoices,
       totalPendingInvoices,
-      totalLateInvoices
     };
   } catch (error) {
     console.error('Database Error:', error);

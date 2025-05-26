@@ -5,6 +5,7 @@ import {
   InboxIcon,
 } from '@heroicons/react/24/outline';
 import { lusitana } from '@/app/ui/fonts';
+import CurrencyDisplay from '@/app/ui/currency-display';
 
 const iconMap = {
   collected: BanknotesIcon,
@@ -36,7 +37,7 @@ export function Card({
   type,
 }: {
   title: string;
-  value: number | string;
+  value: number;
   type: 'invoices' | 'tenants' | 'pending' | 'collected';
 }) {
   const Icon = iconMap[type];
@@ -51,7 +52,11 @@ export function Card({
         className={`${lusitana.className}
           truncate rounded-xl bg-white px-4 py-8 text-center text-2xl`}
       >
-        {value}
+        {type === 'invoices' || type === 'tenants' ? (
+          value
+        ) : (
+          <CurrencyDisplay amount={value} />
+        )}
       </p>
     </div>
   );

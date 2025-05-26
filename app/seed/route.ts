@@ -1,22 +1,31 @@
 // app/seed/route.ts
+import { isDevelopment } from '../lib/env';
 import { PrismaClient, Prisma } from '@prisma/client';
 import { randUuid, randFullName, randEmail, randAddress, randPastDate, randPhoneNumber } from '@ngneat/falso';
 import type { UnitData } from '../lib/types'; 
-import * as bcrypt from 'bcrypt'
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-export async function GET(_request: Request) {
+export async function GET(request: Request) {
+  const environment = 'development'; // Change this to the desired environment
+
+  if (environment !== 'development') {
+    return new Response(
+      JSON.stringify({ error: 'This route is only available in development' }),
+      { status: 403 }
+    );
+  }
+
   try {
     const hashedPassword = await bcrypt.hash('password', 10);
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Seed Users
-      // Generate unique emails by adding an index
       const userData = Array.from({ length: 10 }, (_, index) => ({
         id: randUuid(),
         name: randFullName(),
-        email: randEmail(), // Add index to ensure uniqueness
+        email: randEmail(),
         hashedPassword: hashedPassword,
         role: Math.random() < 0.5 ? 'landlord' : 'tenant',
         createdAt: new Date(),
@@ -58,7 +67,6 @@ export async function GET(_request: Request) {
       const occupiedUnits = unitData.filter(unit => unit.status === 'occupied');
       
       const tenantData: any[] = tenantUsers.map((user, index) => {
-        // Make sure we don't run out of units
         const unitIndex = index % occupiedUnits.length;
         return {
           id: randUuid(),
@@ -92,11 +100,11 @@ export async function GET(_request: Request) {
       }));
       await tx.invoice.createMany({ data: invoiceData });
 
-      // Seed Revenue - updated to match schema
+      // Seed Revenue
       const revenueData = Array.from({ length: 12 }, (_, index) => ({
         id: randUuid(),
-        month: new Date(2024, index).toISOString().slice(0, 7), // Format as 'YYYY-MM'
-        revenue: Math.floor(Math.random() * 50000) + 10000, // Random revenue between 10k and 50k
+        month: new Date(2024, index).toISOString().slice(0, 7),
+        revenue: Math.floor(Math.random() * 50000) + 10000,
       }));
       
       await tx.revenue.createMany({ data: revenueData });

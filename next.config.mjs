@@ -13,7 +13,6 @@ const nextConfig = {
       },
     ];
   },
-  // Exclude /seed route from production build
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'].filter(ext => {
     if (process.env.NODE_ENV === 'production') {
       return !ext.includes('seed');
@@ -22,4 +21,4 @@ const nextConfig = {
   }),
 };
 
-module.exports = nextConfig;
+export default nextConfig;

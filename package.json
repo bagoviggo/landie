@@ -1,10 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "dev": "NODE_ENV=development next dev",
-    "build": "NODE_ENV=production next build",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
-    "seed": "NODE_ENV=development node app/seed/route.ts"
+    "seed": "node app/seed/route.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.4",

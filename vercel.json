@@ -3,10 +3,9 @@
   "buildCommand": "pnpm run build",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "regions": ["fra1"],
   "builds": [
     {
-      "src": "next.config.mjs",
+      "src": "next.config.js",
       "use": "@vercel/next"
     }
   ],

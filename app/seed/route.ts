@@ -15,17 +15,28 @@ import {
 import type { UnitData } from '../lib/types';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+// Only initialize PrismaClient in development
+const prisma = isDevelopment ? new PrismaClient() : null;
 
 export async function GET(request: Request) {
   if (!isDevelopment) {
     return new Response(
       JSON.stringify({ error: 'This route is only available in development' }),
-      { status: 403 }
+      { 
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }
     );
   }
 
   try {
+    if (!prisma) {
+      return new Response(
+        JSON.stringify({ error: 'Prisma client is not initialized' }),
+        { status: 500 }
+      );
+    }
+
     const hashedPassword = await bcrypt.hash('password', 10);
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {

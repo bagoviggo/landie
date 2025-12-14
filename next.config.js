@@ -1,12 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Exclude /seed route from production build
-  pageExtensions: ['tsx', 'ts', 'jsx', 'js'].filter(ext => {
-    if (process.env.NODE_ENV === 'production') {
-      return !ext.includes('seed');
+  webpack: (config, { isServer }) => {
+    // Exclude seed route from client-side builds
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'app/seed': false,
+      };
     }
-    return true;
-  }),
+    return config;
+  },
 };
 
 module.exports = nextConfig;

@@ -219,10 +219,17 @@ export async function fetchTenants() {
   try {
     const data = await executeQuery(`
       SELECT
-        id,
-        name
+        tenant.id,
+        user.name,
+        user.email,
+        user.image,
+        tenant.property_id,
+        tenant.move_in_date,
+        tenant.unit_occupied,
+        tenant.emergency_contact
       FROM tenant
-      ORDER BY name ASC
+      JOIN user ON tenant.user_id = user.id
+      ORDER BY user.name ASC
     `);
 
     const tenants = data.rows;
@@ -238,19 +245,21 @@ export async function fetchFilteredTenants(query: string) {
     const data = await executeQuery(`
       SELECT
         tenant.id,
-        tenant.name,
-        tenant.email,
-        tenant.image_url,
+        user.name,
+        user.email,
+        user.image,
         COUNT(invoice.id) AS total_invoices,
         SUM(CASE WHEN invoice.status = 'pending' THEN invoice.amount ELSE 0 END) AS total_pending,
         SUM(CASE WHEN invoice.status = 'paid' THEN invoice.amount ELSE 0 END) AS total_paid
       FROM tenant
+      JOIN user ON tenant.user_id = user.id
       LEFT JOIN invoice ON tenant.id = invoice.tenant_id
       WHERE
-        tenant.name ILIKE $1 OR
-        tenant.email ILIKE $1
-      GROUP BY tenant.id, tenant.name, tenant.email, tenant.image_url
-      ORDER BY tenant.name ASC
+        user.name ILIKE $1 OR
+        user.email ILIKE $1 OR
+        tenant.unit_occupied ILIKE $1
+      GROUP BY tenant.id, user.name, user.email, user.image
+      ORDER BY user.name ASC
     `, [`%${query}%`]);
 
     const tenants = data.rows.map((tenant) => ({
@@ -263,5 +272,231 @@ export async function fetchFilteredTenants(query: string) {
   } catch (err) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch tenant table.');
+  }
+}
+
+export async function fetchFilteredTenantsPages(query: string) {
+  try {
+    const count = await executeQuery(`
+      SELECT COUNT(*)
+      FROM tenant
+      JOIN user ON tenant.user_id = user.id
+      WHERE
+        user.name ILIKE $1 OR
+        user.email ILIKE $1 OR
+        tenant.unit_occupied ILIKE $1
+    `, [`%${query}%`]);
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total number of tenants.');
+  }
+}
+
+export async function fetchTenantById(id: string) {
+  try {
+    const data = await executeQuery(`
+      SELECT
+        tenant.id,
+        tenant.user_id,
+        tenant.property_id,
+        tenant.move_in_date,
+        tenant.unit_occupied,
+        tenant.emergency_contact,
+        user.name,
+        user.email,
+        user.image
+      FROM tenant
+      JOIN user ON tenant.user_id = user.id
+      WHERE tenant.id = $1
+    `, [id]);
+
+    if (data.rows.length === 0) {
+      return null;
+    }
+
+    const tenant = data.rows[0];
+    return tenant;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch tenant.');
+  }
+}
+
+export async function createTenant(tenantData: {
+  name: string;
+  email: string;
+  password?: string;
+  propertyId: string;
+  moveInDate: Date;
+  unitOccupied: string;
+  emergencyContact: string;
+}) {
+  const client = await db.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Create user first
+    const userResult = await client.query(
+      `INSERT INTO user (name, email, hashed_password, role, created_at)
+       VALUES ($1, $2, $3, 'tenant', NOW())
+       RETURNING id`,
+      [tenantData.name, tenantData.email, tenantData.password || 'defaultpassword']
+    );
+    
+    const userId = userResult.rows[0].id;
+    
+    // Create tenant linked to user
+    const tenantResult = await client.query(
+      `INSERT INTO tenant (user_id, property_id, move_in_date, unit_occupied, emergency_contact)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [userId, tenantData.propertyId, tenantData.moveInDate, tenantData.unitOccupied, tenantData.emergencyContact]
+    );
+    
+    await client.query('COMMIT');
+    
+    return tenantResult.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to create tenant.');
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateTenant(id: string, tenantData: {
+  name?: string;
+  email?: string;
+  propertyId?: string;
+  moveInDate?: Date;
+  unitOccupied?: string;
+  emergencyContact?: string;
+}) {
+  const client = await db.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Get tenant's user_id
+    const tenantResult = await client.query(
+      `SELECT user_id FROM tenant WHERE id = $1`,
+      [id]
+    );
+    
+    if (tenantResult.rows.length === 0) {
+      throw new Error('Tenant not found');
+    }
+    
+    const userId = tenantResult.rows[0].user_id;
+    
+    // Update user if name or email provided
+    if (tenantData.name || tenantData.email) {
+      await client.query(
+        `UPDATE user SET name = COALESCE($1, name), email = COALESCE($2, email) WHERE id = $3`,
+        [tenantData.name, tenantData.email, userId]
+      );
+    }
+    
+    // Update tenant
+    const updatedTenant = await client.query(
+      `UPDATE tenant SET
+        property_id = COALESCE($1, property_id),
+        move_in_date = COALESCE($2, move_in_date),
+        unit_occupied = COALESCE($3, unit_occupied),
+        emergency_contact = COALESCE($4, emergency_contact)
+       WHERE id = $5
+       RETURNING *`,
+      [tenantData.propertyId, tenantData.moveInDate, tenantData.unitOccupied, tenantData.emergencyContact, id]
+    );
+    
+    await client.query('COMMIT');
+    
+    return updatedTenant.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to update tenant.');
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteTenant(id: string) {
+  const client = await db.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Get tenant's user_id first
+    const tenantResult = await client.query(
+      `SELECT user_id FROM tenant WHERE id = $1`,
+      [id]
+    );
+    
+    if (tenantResult.rows.length === 0) {
+      throw new Error('Tenant not found');
+    }
+    
+    const userId = tenantResult.rows[0].user_id;
+    
+    // Delete tenant (cascade should handle related invoices)
+    await client.query(`DELETE FROM tenant WHERE id = $1`, [id]);
+    
+    // Delete associated user
+    await client.query(`DELETE FROM user WHERE id = $1`, [userId]);
+    
+    await client.query('COMMIT');
+    
+    return { success: true };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to delete tenant.');
+  } finally {
+    client.release();
+  }
+}
+
+export async function fetchProperties() {
+  try {
+    const data = await executeQuery(`
+      SELECT
+        property.id,
+        property.address,
+        property.total_units,
+        landlord.company_name
+      FROM property
+      JOIN landlord ON property.landlord_id = landlord.id
+      ORDER BY property.address ASC
+    `);
+
+    return data.rows;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch properties.');
+  }
+}
+
+export async function fetchUnitsByProperty(propertyId: string) {
+  try {
+    const data = await executeQuery(`
+      SELECT
+        unit.id,
+        unit.unit_number,
+        unit.status
+      FROM unit
+      WHERE unit.property_id = $1
+      ORDER BY unit.unit_number ASC
+    `, [propertyId]);
+
+    return data.rows;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch units.');
   }
 }

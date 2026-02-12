@@ -109,6 +109,11 @@ export type InvoicesTable = {
 export type TenantField = {
   id: string;
   name: string;
+  email?: string;
+  propertyId?: string;
+  moveInDate?: Date;
+  unitOccupied?: string;
+  emergencyContact?: string;
 };
 
 // Added based on fetchFilteredTenants
@@ -116,7 +121,7 @@ export type TenantsTableType = {
   id: string;
   name: string;
   email: string;
-  image_url?: string;
+  image?: string;
   total_invoices: number;
   total_pending: number;
   total_paid: number;
@@ -127,8 +132,42 @@ export type FormattedTenantsTable = {
   id: string;
   name: string;
   email: string;
-  imageUrl?: string; // Renamed for camelCase consistency
-  totalInvoices: number; // Renamed for camelCase consistency
-  totalPending: number; // Renamed for camelCase consistency
-  totalPaid: number; // Renamed for camelCase consistency
+  imageUrl?: string;
+  totalInvoices: number;
+  totalPending: number;
+  totalPaid: number;
+};
+
+// Tenant CRUD types
+export type CreateTenantPayload = {
+  name: string;
+  email: string;
+  password?: string;
+  propertyId: string;
+  moveInDate: Date;
+  unitOccupied: string;
+  emergencyContact: string;
+};
+
+export type UpdateTenantPayload = {
+  name?: string;
+  email?: string;
+  propertyId?: string;
+  moveInDate?: Date;
+  unitOccupied?: string;
+  emergencyContact?: string;
+};
+
+// Property and Unit types for dropdowns
+export type PropertyField = {
+  id: string;
+  address: string;
+  total_units: number;
+  company_name?: string;
+};
+
+export type UnitField = {
+  id: string;
+  unit_number: string;
+  status: string;
 };

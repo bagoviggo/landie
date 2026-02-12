@@ -203,3 +203,33 @@ export type LandlordsTableType = {
   image?: string;
   total_properties: number;
 };
+
+// Property CRUD types
+export type PropertyData = {
+  id: string;
+  address: string;
+  total_units: number;
+  landlord_id: string;
+  company_name?: string;
+};
+
+export type CreatePropertyPayload = {
+  address: string;
+  totalUnits: number;
+  landlordId: string;
+};
+
+export type UpdatePropertyPayload = {
+  address?: string;
+  totalUnits?: number;
+  landlordId?: string;
+};
+
+export type PropertiesTableType = {
+  id: string;
+  address: string;
+  total_units: number;
+  company_name: string;
+  total_tenants: number;
+  total_units_occupied: number;
+};

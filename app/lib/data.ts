@@ -899,3 +899,205 @@ export async function deleteLandlord(id: string) {
   }
 }
 
+export async function fetchFilteredProperties(query: string) {
+  try {
+    const data = await executeQuery(`
+      SELECT
+        property.id,
+        property.address,
+        property.total_units,
+        landlord.company_name,
+        COUNT(tenant.id) AS total_tenants,
+        COUNT(CASE WHEN unit.status = 'occupied' THEN 1 END) AS total_units_occupied
+      FROM property
+      JOIN landlord ON property.landlord_id = landlord.id
+      LEFT JOIN tenant ON property.id = tenant.property_id
+      LEFT JOIN unit ON property.id = unit.property_id
+      WHERE
+        property.address ILIKE $1 OR
+        landlord.company_name ILIKE $1
+      GROUP BY property.id, property.address, property.total_units, landlord.company_name
+      ORDER BY property.address ASC
+    `, [`%${query}%`]);
+
+    return data.rows;
+  } catch (err) {
+    console.log('Using placeholder filtered properties data');
+    // Return placeholder properties
+    return [
+      {
+        id: '1',
+        address: '123 Main St',
+        total_units: 10,
+        company_name: 'Landie Properties',
+        total_tenants: 8,
+        total_units_occupied: 8,
+      },
+      {
+        id: '2',
+        address: '456 Oak Ave',
+        total_units: 8,
+        company_name: 'Apex Realty',
+        total_tenants: 6,
+        total_units_occupied: 6,
+      },
+    ].filter(property =>
+      property.address.toLowerCase().includes(query.toLowerCase()) ||
+      property.company_name.toLowerCase().includes(query.toLowerCase())
+    );
+  }
+}
+
+export async function fetchPropertiesPages(query: string) {
+  try {
+    const count = await executeQuery(`
+      SELECT COUNT(*)
+      FROM property
+      JOIN landlord ON property.landlord_id = landlord.id
+      WHERE
+        property.address ILIKE $1 OR
+        landlord.company_name ILIKE $1
+    `, [`%${query}%`]);
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.log('Using placeholder properties pages count');
+    // Count pages from placeholder data
+    const filtered = [
+      { address: '123 Main St', company_name: 'Landie Properties' },
+      { address: '456 Oak Ave', company_name: 'Apex Realty' },
+    ].filter(property =>
+      property.address.toLowerCase().includes(query.toLowerCase()) ||
+      property.company_name.toLowerCase().includes(query.toLowerCase())
+    );
+
+    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  }
+}
+
+export async function fetchPropertyById(id: string) {
+  try {
+    const data = await executeQuery(`
+      SELECT
+        property.id,
+        property.address,
+        property.total_units,
+        property.landlord_id,
+        landlord.company_name
+      FROM property
+      JOIN landlord ON property.landlord_id = landlord.id
+      WHERE property.id = $1
+    `, [id]);
+
+    if (data.rows.length === 0) {
+      return null;
+    }
+
+    return data.rows[0];
+  } catch (error) {
+    console.log('Using placeholder property by id');
+    // Find property in placeholder data
+    const properties = [
+      {
+        id: '1',
+        address: '123 Main St',
+        total_units: 10,
+        landlord_id: 'landlord1',
+        company_name: 'Landie Properties',
+      },
+      {
+        id: '2',
+        address: '456 Oak Ave',
+        total_units: 8,
+        landlord_id: 'landlord2',
+        company_name: 'Apex Realty',
+      },
+    ];
+
+    return properties.find(p => p.id === id) || null;
+  }
+}
+
+export async function createProperty(propertyData: {
+  address: string;
+  totalUnits: number;
+  landlordId: string;
+}) {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO property (address, total_units, landlord_id)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [propertyData.address, propertyData.totalUnits, propertyData.landlordId]
+    );
+
+    await client.query('COMMIT');
+
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to create property.');
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateProperty(id: string, propertyData: {
+  address?: string;
+  totalUnits?: number;
+  landlordId?: string;
+}) {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `UPDATE property SET
+        address = COALESCE($1, address),
+        total_units = COALESCE($2, total_units),
+        landlord_id = COALESCE($3, landlord_id)
+       WHERE id = $4
+       RETURNING *`,
+      [propertyData.address, propertyData.totalUnits, propertyData.landlordId, id]
+    );
+
+    await client.query('COMMIT');
+
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to update property.');
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteProperty(id: string) {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Delete property (cascade should handle related tenants and units)
+    await client.query(`DELETE FROM property WHERE id = $1`, [id]);
+
+    await client.query('COMMIT');
+
+    return { success: true };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to delete property.');
+  } finally {
+    client.release();
+  }
+}
+

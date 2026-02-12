@@ -88,3 +88,13 @@ export async function signup(
   }
 }
 
+export async function deleteProperty(id: string) {
+  try {
+    await db.query(`DELETE FROM property WHERE id = $1`, [id]);
+    redirect('/dashboard/properties');
+  } catch (error) {
+    console.error('Delete property error:', error);
+    throw new Error('Failed to delete property.');
+  }
+}
+

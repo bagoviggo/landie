@@ -1,4 +1,4 @@
-# TODO - Use Placeholder Data
+# TODO - Replace Invoices with Properties (Admin-Only) and Integrate Schema
 
 ## ✅ Completed
 
@@ -34,6 +34,23 @@ The data fetching functions now:
 
 ## 🚧 In Progress
 
+### Replace Invoices with Properties (Admin-Only)
+- [ ] Update Navigation: Remove 'Invoices' link, add 'Properties' link (admin-only)
+- [ ] Update Types (`app/lib/types.ts`): Add PropertyData, CreatePropertyPayload, UpdatePropertyPayload, PropertiesTableType
+- [ ] Add Data Functions (`app/lib/data.ts`): fetchFilteredProperties, fetchPropertiesPages, fetchPropertyById, createProperty, updateProperty, deleteProperty
+- [ ] Create API Routes: `app/api/properties/route.ts`, `app/api/properties/[id]/route.ts`
+- [ ] Create UI Components: table.tsx, buttons.tsx, create-form.tsx, edit-form.tsx
+- [ ] Create Pages: properties page, create page, edit page
+- [ ] Update Dashboard: Replace latest invoices with latest properties or relevant metrics
+- [ ] Update TODO.md: Track progress
+
+### Schema Integration for Vercel Deployment
+- [ ] Review Prisma Schema: Ensure all models are complete and relationships are correct
+- [ ] Run Migrations: Generate and apply any pending migrations
+- [ ] Update Placeholder Data: Ensure placeholder data matches schema
+- [ ] Test Database Connection: Verify schema works with PostgreSQL on Vercel
+- [ ] Update Environment Variables: Ensure DATABASE_URL is configured for Vercel
+
 ### Landlords CRUD Implementation
 - [x] Update Types (`app/lib/types.ts`): Add LandlordData, CreateLandlordPayload, UpdateLandlordPayload, LandlordsTableType
 - [x] Add Data Functions (`app/lib/data.ts`): fetchFilteredLandlords, fetchLandlordsPages, fetchLandlordById, createLandlord, updateLandlord, deleteLandlord
@@ -41,5 +58,22 @@ The data fetching functions now:
 - [x] Create UI Components: table.tsx, buttons.tsx, create-form.tsx, edit-form.tsx
 - [x] Create Pages: landlords page, create page, edit page
 - [x] Update Navigation: Add landlords link to sidenav (role-based: landlord/admin only)
+- [x] Update TODO.md: Track progress
+
+### UI/UX Improvements
+- [ ] Improve Dashboard Cards: Add properties count, update metrics
+- [ ] Enhance Forms: Better validation, error handling, loading states
+- [ ] Responsive Design: Ensure all pages work well on mobile
+- [ ] Accessibility: Add proper ARIA labels, keyboard navigation
+- [ ] Loading States: Add skeletons and loading indicators
+- [ ] Error Handling: Better error messages and recovery
+
+### Tenants CRUD Implementation
+- [x] Update Types (`app/lib/types.ts`): Add TenantData, CreateTenantPayload, UpdateTenantPayload, TenantsTableType
+- [x] Add Data Functions (`app/lib/data.ts`): fetchFilteredTenants, fetchTenantsPages, fetchTenantById, createTenant, updateTenant, deleteTenant
+- [x] Create API Routes: `app/api/tenants/route.ts`, `app/api/tenants/[id]/route.ts`
+- [x] Create UI Components: table.tsx, buttons.tsx, create-form.tsx, edit-form.tsx
+- [x] Create Pages: tenants page, create page, edit page
+- [x] Update Navigation: Add tenants link to sidenav
 - [x] Update TODO.md: Track progress
 

@@ -1,55 +1,28 @@
-# Authentication Complete Fix Plan
+# TODO - Hardcode Admin Credentials
 
-## Issues Identified:
-1. No signup page for new users
-2. Login/signup buttons on landing page don't work (link to non-existent pages)
-3. Need proper user registration with NextAuth credentials
+## ✅ Completed
 
-## Implementation Plan - COMPLETED ✅
+### Implementation Complete
+- Modified `auth.ts` to add hardcoded admin user credentials
+- Admin credentials are checked before database lookup
+- User object returned with admin role upon successful authentication
 
-### Step 1: Created Signup Page (`app/signup/page.tsx`) ✅
-- Created signup page with registration form
+### Admin Credentials (Hardcoded)
+- **Email:** admin@landie.com
+- **Password:** admin123
+- **Role:** admin
+- **User ID:** admin-001
 
-### Step 2: Created Signup Form Component (`app/ui/signup-form.tsx`) ✅
-- Form with name, email, password fields
-- Registration action that creates user in database
+### How to Test
+1. Start your Next.js development server: `npm run dev`
+2. Navigate to the login page: `/login`
+3. Enter the admin credentials:
+   - Email: admin@landie.com
+   - Password: admin123
+4. Click "Log in" - you should be redirected to the dashboard
+5. Verify you have access to all dashboard features
 
-### Step 3: Updated Actions (`app/lib/actions.ts`) ✅
-- Added `signup` action for user registration
-- Hash password using bcrypt
-- Create user in database
-- Validates input with zod
-
-### Step 4: Updated Landing Page (`app/page.tsx`) ✅
-- Fixed "Get Started" button to link to `/signup`
-- Fixed Sign Up Now button in CTA section
-- Styled Sign Up button in header
-
-### Step 5: Earlier Fixes (Before This Round) ✅
-- Added JWT and Session callbacks in `auth.ts`
-- Created type augmentation in `app/types/next-auth.d.ts`
-- Added secret configuration in `auth.config.ts`
-
-## Files Created:
-- `app/signup/page.tsx` - Signup page
-- `app/ui/signup-form.tsx` - Signup form component
-- `app/types/next-auth.d.ts` - Type augmentation
-
-## Files Modified:
-- `app/lib/actions.ts` - Added signup action
-- `app/page.tsx` - Fixed button links
-- `auth.ts` - Added JWT/Session callbacks
-- `auth.config.ts` - Added secret configuration
-
-## Next Steps:
-- Run `pnpm dev` to test the authentication flow
-- Navigate to `/signup` to test registration
-- After testing, commit the changes
-
-## Testing the Authentication Flow:
-1. Navigate to `/login` - Login page works
-2. Navigate to `/signup` - Signup page works
-3. Register a new user - Creates account in database
-4. After signup - Automatically logged in and redirected to dashboard
-5. All buttons on landing page now work correctly
-
+### Notes
+- These credentials are for testing purposes only
+- In production, remove the hardcoded admin user and use proper database authentication
+- The admin user bypasses the database lookup for faster testing

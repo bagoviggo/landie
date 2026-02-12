@@ -38,6 +38,15 @@ async function getUser(email: string) {
   }
 }
 
+// Hardcoded admin credentials for testing
+const ADMIN_USER = {
+  id: 'admin-001',
+  name: 'Admin User',
+  email: 'admin@landie.com',
+  password: 'admin123',
+  role: 'admin',
+};
+
 export const { auth, signIn, signOut, handlers } = NextAuth({
   ...authConfig,
   providers: [
@@ -54,6 +63,18 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data;
           
+          // Check for hardcoded admin user first
+          if (email === ADMIN_USER.email && password === ADMIN_USER.password) {
+            console.log('Admin authentication successful');
+            return {
+              id: ADMIN_USER.id,
+              name: ADMIN_USER.name,
+              email: ADMIN_USER.email,
+              role: ADMIN_USER.role,
+            };
+          }
+          
+          // Fall back to database lookup for regular users
           const user = await getUser(email);
           
           if (!user) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchTenantById, updateTenant, deleteTenant } from '@/app/lib/data';
+import { fetchLandlordById, updateLandlord, deleteLandlord } from '@/app/lib/data';
 
 export async function GET(
   request: Request,
@@ -8,20 +8,20 @@ export async function GET(
   try {
     const params = await props.params;
     const id = params.id;
-    const tenant = await fetchTenantById(id);
+    const landlord = await fetchLandlordById(id);
 
-    if (!tenant) {
+    if (!landlord) {
       return NextResponse.json(
-        { error: 'Tenant not found' },
+        { error: 'Landlord not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(tenant);
+    return NextResponse.json(landlord);
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch tenant' },
+      { error: 'Failed to fetch landlord' },
       { status: 500 }
     );
   }
@@ -39,26 +39,20 @@ export async function PUT(
     const {
       name,
       email,
-      propertyId,
-      moveInDate,
-      unitOccupied,
-      emergencyContact,
+      companyName,
     } = body;
 
-    const tenant = await updateTenant(id, {
+    const landlord = await updateLandlord(id, {
       name,
       email,
-      propertyId,
-      moveInDate: moveInDate ? new Date(moveInDate) : undefined,
-      unitOccupied,
-      emergencyContact,
+      companyName,
     });
 
-    return NextResponse.json(tenant);
+    return NextResponse.json(landlord);
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to update tenant' },
+      { error: 'Failed to update landlord' },
       { status: 500 }
     );
   }
@@ -71,15 +65,13 @@ export async function DELETE(
   try {
     const params = await props.params;
     const id = params.id;
-    await deleteTenant(id);
-
+    await deleteLandlord(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to delete tenant' },
+      { error: 'Failed to delete landlord' },
       { status: 500 }
     );
   }
 }
-

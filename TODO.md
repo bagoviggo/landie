@@ -1,28 +1,45 @@
-# TODO - Hardcode Admin Credentials
+# TODO - Use Placeholder Data
 
 ## ✅ Completed
 
 ### Implementation Complete
-- Modified `auth.ts` to add hardcoded admin user credentials
-- Admin credentials are checked before database lookup
-- User object returned with admin role upon successful authentication
+- Modified `app/lib/data.ts` to use placeholder data when database connection fails
+- All data fetching functions now fall back to placeholder data from `app/lib/placeholder-data.ts`
+- Dashboard and other pages can now work without a running PostgreSQL database
 
-### Admin Credentials (Hardcoded)
-- **Email:** admin@landie.com
-- **Password:** admin123
-- **Role:** admin
-- **User ID:** admin-001
+### Modified Functions
+- `fetchRevenue()` - Returns placeholder revenue data on DB error
+- `fetchLatestInvoices()` - Returns placeholder invoices on DB error
+- `fetchCardData()` - Calculates stats from placeholder data on DB error
+- `fetchFilteredInvoices()` - Filters placeholder invoices on DB error
+- `fetchInvoicesPages()` - Counts pages from placeholder data on DB error
+- `fetchInvoiceById()` - Finds invoice in placeholder data on DB error
+- `fetchTenants()` - Returns placeholder tenants on DB error
+- `fetchFilteredTenants()` - Filters placeholder tenants on DB error
+- `fetchFilteredTenantsPages()` - Counts pages from placeholder data on DB error
+- `fetchTenantById()` - Finds tenant in placeholder data on DB error
+- `fetchProperties()` - Returns placeholder properties on DB error
+- `fetchUnitsByProperty()` - Returns placeholder units on DB error
 
-### How to Test
-1. Start your Next.js development server: `npm run dev`
-2. Navigate to the login page: `/login`
-3. Enter the admin credentials:
-   - Email: admin@landie.com
-   - Password: admin123
-4. Click "Log in" - you should be redirected to the dashboard
-5. Verify you have access to all dashboard features
+### How It Works
+The data fetching functions now:
+1. Try to execute the database query first
+2. If the query fails (e.g., due to no database connection), catch the error
+3. Return appropriate placeholder data from `app/lib/placeholder-data.ts`
 
 ### Notes
-- These credentials are for testing purposes only
-- In production, remove the hardcoded admin user and use proper database authentication
-- The admin user bypasses the database lookup for faster testing
+- This allows the app to run and display data for testing purposes
+- In production with a running database, the real data will be fetched
+- The placeholder data provides a consistent experience for development and demo
+
+## 🚧 In Progress
+
+### Landlords CRUD Implementation
+- [x] Update Types (`app/lib/types.ts`): Add LandlordData, CreateLandlordPayload, UpdateLandlordPayload, LandlordsTableType
+- [x] Add Data Functions (`app/lib/data.ts`): fetchFilteredLandlords, fetchLandlordsPages, fetchLandlordById, createLandlord, updateLandlord, deleteLandlord
+- [x] Create API Routes: `app/api/landlords/route.ts`, `app/api/landlords/[id]/route.ts`
+- [x] Create UI Components: table.tsx, buttons.tsx, create-form.tsx, edit-form.tsx
+- [x] Create Pages: landlords page, create page, edit page
+- [x] Update Navigation: Add landlords link to sidenav (role-based: landlord/admin only)
+- [x] Update TODO.md: Track progress
+

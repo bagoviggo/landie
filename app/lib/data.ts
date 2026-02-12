@@ -12,6 +12,7 @@ import {
 } from './types';
 import { useCurrency } from '@/app/context/currency-context';
 import { formatCurrency } from '@/app/lib/utils';
+import { tenants, invoices, revenue, users } from './placeholder-data';
 
 // Configure local database connection
 // These can also be set as environment variables
@@ -31,7 +32,7 @@ const db = createPool(localDbConfig);
 // Helper function to execute SQL queries
 async function executeQuery(query: string, params: any[] = []) {
   if (!process.env.DATABASE_URL) {
-    console.error('Database connection string not provided');
+    console.log('Database connection string not provided, using placeholder data');
     throw new Error('Database connection string not provided');
   }
   
@@ -60,8 +61,22 @@ export async function fetchRevenue() {
     // Reverse the data to display the oldest month first
     return data.rows.reverse();
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch revenue data.');
+    console.log('Using placeholder revenue data');
+    // Return placeholder revenue data
+    return [
+      { month: 'Jan', total_revenue: 2000 },
+      { month: 'Feb', total_revenue: 1800 },
+      { month: 'Mar', total_revenue: 2200 },
+      { month: 'Apr', total_revenue: 2500 },
+      { month: 'May', total_revenue: 2300 },
+      { month: 'Jun', total_revenue: 3200 },
+      { month: 'Jul', total_revenue: 3500 },
+      { month: 'Aug', total_revenue: 3700 },
+      { month: 'Sep', total_revenue: 2500 },
+      { month: 'Oct', total_revenue: 2800 },
+      { month: 'Nov', total_revenue: 3000 },
+      { month: 'Dec', total_revenue: 8000 },
+    ];
   }
 }
 
@@ -100,8 +115,15 @@ export async function fetchLatestInvoices() {
     
     return latestInvoices;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch the latest invoices.');
+    console.log('Using placeholder latest invoices data');
+    // Return placeholder latest invoices with formatted amounts
+    return invoices.slice(0, 5).map((invoice) => ({
+      id: invoice.id,
+      name: invoice.name,
+      email: invoice.email,
+      image_url: invoice.image_url,
+      amount: formatCurrency(invoice.amount),
+    }));
   }
 }
 
@@ -128,8 +150,18 @@ export async function fetchCardData() {
       totalPendingInvoices,
     };
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch card data.');
+    console.log('Using placeholder card data');
+    // Calculate stats from placeholder invoices
+    const placeholderInvoices = invoices;
+    const paidInvoices = placeholderInvoices.filter(inv => inv.status === 'paid');
+    const pendingInvoices = placeholderInvoices.filter(inv => inv.status === 'pending');
+    
+    return {
+      numberOfTenants: tenants.length,
+      numberOfInvoices: placeholderInvoices.length,
+      totalPaidInvoices: paidInvoices.reduce((sum, inv) => sum + inv.amount, 0),
+      totalPendingInvoices: pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0),
+    };
   }
 }
 
@@ -140,7 +172,7 @@ export async function fetchFilteredInvoices(
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
-    const invoices = await executeQuery(`
+    const invoicesData = await executeQuery(`
       SELECT
         invoice.id,
         invoice.amount,
@@ -161,10 +193,32 @@ export async function fetchFilteredInvoices(
       LIMIT ${ITEMS_PER_PAGE} OFFSET $2
     `, [`%${query}%`, offset]);
 
-    return invoices.rows;
+    return invoicesData.rows;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoices.');
+    console.log('Using placeholder filtered invoices data');
+    // Filter placeholder invoices based on query
+    const lowerQuery = query.toLowerCase();
+    const filtered = invoices.filter(inv => 
+      inv.name.toLowerCase().includes(lowerQuery) ||
+      inv.email.toLowerCase().includes(lowerQuery) ||
+      inv.amount.toString().includes(lowerQuery) ||
+      inv.date.includes(lowerQuery) ||
+      inv.status.toLowerCase().includes(lowerQuery)
+    );
+    
+    // Apply pagination
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedInvoices = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    
+    return paginatedInvoices.map(inv => ({
+      id: inv.id,
+      amount: inv.amount,
+      date: inv.date,
+      status: inv.status,
+      name: inv.name,
+      email: inv.email,
+      image_url: inv.image_url,
+    }));
   }
 }
 
@@ -185,8 +239,18 @@ export async function fetchInvoicesPages(query: string) {
     const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
     return totalPages;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch total number of invoices.');
+    console.log('Using placeholder invoice pages count');
+    // Count pages from placeholder data
+    const lowerQuery = query.toLowerCase();
+    const filtered = invoices.filter(inv => 
+      inv.name.toLowerCase().includes(lowerQuery) ||
+      inv.email.toLowerCase().includes(lowerQuery) ||
+      inv.amount.toString().includes(lowerQuery) ||
+      inv.date.includes(lowerQuery) ||
+      inv.status.toLowerCase().includes(lowerQuery)
+    );
+    
+    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
   }
 }
 
@@ -210,8 +274,18 @@ export async function fetchInvoiceById(id: string) {
     
     return invoice[0];
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoice.');
+    console.log('Using placeholder invoice by id');
+    // Find invoice in placeholder data
+    const invoice = invoices.find(inv => inv.id === id);
+    if (invoice) {
+      return {
+        id: invoice.id,
+        tenant_id: invoice.tenant_id,
+        amount: invoice.amount / 100, // Convert from cents to dollars
+        status: invoice.status
+      };
+    }
+    return null;
   }
 }
 
@@ -232,11 +306,21 @@ export async function fetchTenants() {
       ORDER BY user.name ASC
     `);
 
-    const tenants = data.rows;
-    return tenants;
+    const tenantsData = data.rows;
+    return tenantsData;
   } catch (err) {
-    console.error('Database Error:', err);
-    throw new Error('Failed to fetch all tenants.');
+    console.log('Using placeholder tenants data');
+    // Return placeholder tenants
+    return tenants.map(tenant => ({
+      id: tenant.id,
+      name: tenant.name,
+      email: tenant.email,
+      image: tenant.image_url,
+      property_id: null,
+      move_in_date: null,
+      unit_occupied: null,
+      emergency_contact: null,
+    }));
   }
 }
 
@@ -270,8 +354,35 @@ export async function fetchFilteredTenants(query: string) {
 
     return tenants;
   } catch (err) {
-    console.error('Database Error:', err);
-    throw new Error('Failed to fetch tenant table.');
+    console.log('Using placeholder filtered tenants data');
+    // Filter placeholder tenants based on query
+    const lowerQuery = query.toLowerCase();
+    const filtered = tenants.filter(tenant => 
+      tenant.name.toLowerCase().includes(lowerQuery) ||
+      tenant.email.toLowerCase().includes(lowerQuery) ||
+      (tenant.phone && tenant.phone.includes(lowerQuery))
+    );
+    
+    return filtered.map(tenant => {
+      // Find related invoices
+      const tenantInvoices = invoices.filter(inv => inv.tenant_id === tenant.id);
+      const totalPending = tenantInvoices
+        .filter(inv => inv.status === 'pending')
+        .reduce((sum, inv) => sum + inv.amount, 0);
+      const totalPaid = tenantInvoices
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.amount, 0);
+      
+      return {
+        id: tenant.id,
+        name: tenant.name,
+        email: tenant.email,
+        image: tenant.image_url,
+        total_invoices: tenantInvoices.length,
+        total_pending: formatCurrency(totalPending),
+        total_paid: formatCurrency(totalPaid),
+      };
+    });
   }
 }
 
@@ -290,8 +401,15 @@ export async function fetchFilteredTenantsPages(query: string) {
     const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
     return totalPages;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch total number of tenants.');
+    console.log('Using placeholder tenant pages count');
+    // Count pages from placeholder data
+    const lowerQuery = query.toLowerCase();
+    const filtered = tenants.filter(tenant => 
+      tenant.name.toLowerCase().includes(lowerQuery) ||
+      tenant.email.toLowerCase().includes(lowerQuery)
+    );
+    
+    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
   }
 }
 
@@ -320,8 +438,23 @@ export async function fetchTenantById(id: string) {
     const tenant = data.rows[0];
     return tenant;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch tenant.');
+    console.log('Using placeholder tenant by id');
+    // Find tenant in placeholder data
+    const tenant = tenants.find(t => t.id === id);
+    if (tenant) {
+      return {
+        id: tenant.id,
+        user_id: null,
+        property_id: null,
+        move_in_date: null,
+        unit_occupied: null,
+        emergency_contact: null,
+        name: tenant.name,
+        email: tenant.email,
+        image: tenant.image_url,
+      };
+    }
+    return null;
   }
 }
 
@@ -477,8 +610,13 @@ export async function fetchProperties() {
 
     return data.rows;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch properties.');
+    console.log('Using placeholder properties data');
+    // Return placeholder properties
+    return [
+      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties' },
+      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Landie Properties' },
+      { id: '3', address: '789 Pine Rd', total_units: 12, company_name: 'Landie Properties' },
+    ];
   }
 }
 
@@ -496,7 +634,268 @@ export async function fetchUnitsByProperty(propertyId: string) {
 
     return data.rows;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch units.');
+    console.log('Using placeholder units data');
+    // Return placeholder units based on property
+    return [
+      { id: '1', unit_number: '101', status: 'occupied' },
+      { id: '2', unit_number: '102', status: 'available' },
+      { id: '3', unit_number: '103', status: 'occupied' },
+      { id: '4', unit_number: '104', status: 'available' },
+    ];
   }
 }
+
+export async function fetchFilteredLandlords(query: string) {
+  try {
+    const data = await executeQuery(`
+      SELECT
+        landlord.id,
+        user.name,
+        user.email,
+        user.image,
+        landlord.company_name,
+        COUNT(property.id) AS total_properties
+      FROM landlord
+      JOIN user ON landlord.user_id = user.id
+      LEFT JOIN property ON landlord.id = property.landlord_id
+      WHERE
+        user.name ILIKE $1 OR
+        user.email ILIKE $1 OR
+        landlord.company_name ILIKE $1
+      GROUP BY landlord.id, user.name, user.email, user.image, landlord.company_name
+      ORDER BY user.name ASC
+    `, [`%${query}%`]);
+
+    return data.rows;
+  } catch (err) {
+    console.log('Using placeholder filtered landlords data');
+    // Return placeholder landlords
+    return [
+      {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@landie.com',
+        image: null,
+        company_name: 'Landie Properties',
+        total_properties: 3,
+      },
+      {
+        id: '2',
+        name: 'Jane Smith',
+        email: 'jane@apex.com',
+        image: null,
+        company_name: 'Apex Realty',
+        total_properties: 2,
+      },
+    ].filter(landlord =>
+      landlord.name.toLowerCase().includes(query.toLowerCase()) ||
+      landlord.email.toLowerCase().includes(query.toLowerCase()) ||
+      landlord.company_name.toLowerCase().includes(query.toLowerCase())
+    );
+  }
+}
+
+export async function fetchLandlordsPages(query: string) {
+  try {
+    const count = await executeQuery(`
+      SELECT COUNT(*)
+      FROM landlord
+      JOIN user ON landlord.user_id = user.id
+      WHERE
+        user.name ILIKE $1 OR
+        user.email ILIKE $1 OR
+        landlord.company_name ILIKE $1
+    `, [`%${query}%`]);
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.log('Using placeholder landlord pages count');
+    // Count pages from placeholder data
+    const filtered = [
+      { name: 'John Doe', email: 'john@landie.com', company_name: 'Landie Properties' },
+      { name: 'Jane Smith', email: 'jane@apex.com', company_name: 'Apex Realty' },
+    ].filter(landlord =>
+      landlord.name.toLowerCase().includes(query.toLowerCase()) ||
+      landlord.email.toLowerCase().includes(query.toLowerCase()) ||
+      landlord.company_name.toLowerCase().includes(query.toLowerCase())
+    );
+
+    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  }
+}
+
+export async function fetchLandlordById(id: string) {
+  try {
+    const data = await executeQuery(`
+      SELECT
+        landlord.id,
+        landlord.user_id,
+        landlord.company_name,
+        user.name,
+        user.email,
+        user.image
+      FROM landlord
+      JOIN user ON landlord.user_id = user.id
+      WHERE landlord.id = $1
+    `, [id]);
+
+    if (data.rows.length === 0) {
+      return null;
+    }
+
+    return data.rows[0];
+  } catch (error) {
+    console.log('Using placeholder landlord by id');
+    // Find landlord in placeholder data
+    const landlords = [
+      {
+        id: '1',
+        user_id: 'user1',
+        company_name: 'Landie Properties',
+        name: 'John Doe',
+        email: 'john@landie.com',
+        image: null,
+      },
+      {
+        id: '2',
+        user_id: 'user2',
+        company_name: 'Apex Realty',
+        name: 'Jane Smith',
+        email: 'jane@apex.com',
+        image: null,
+      },
+    ];
+
+    return landlords.find(l => l.id === id) || null;
+  }
+}
+
+export async function createLandlord(landlordData: {
+  name: string;
+  email: string;
+  password?: string;
+  companyName: string;
+}) {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Create user first
+    const userResult = await client.query(
+      `INSERT INTO user (name, email, hashed_password, role, created_at)
+       VALUES ($1, $2, $3, 'landlord', NOW())
+       RETURNING id`,
+      [landlordData.name, landlordData.email, landlordData.password || 'defaultpassword']
+    );
+
+    const userId = userResult.rows[0].id;
+
+    // Create landlord linked to user
+    const landlordResult = await client.query(
+      `INSERT INTO landlord (user_id, company_name)
+       VALUES ($1, $2)
+       RETURNING *`,
+      [userId, landlordData.companyName]
+    );
+
+    await client.query('COMMIT');
+
+    return landlordResult.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to create landlord.');
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateLandlord(id: string, landlordData: {
+  name?: string;
+  email?: string;
+  companyName?: string;
+}) {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Get landlord's user_id
+    const landlordResult = await client.query(
+      `SELECT user_id FROM landlord WHERE id = $1`,
+      [id]
+    );
+
+    if (landlordResult.rows.length === 0) {
+      throw new Error('Landlord not found');
+    }
+
+    const userId = landlordResult.rows[0].user_id;
+
+    // Update user if name or email provided
+    if (landlordData.name || landlordData.email) {
+      await client.query(
+        `UPDATE user SET name = COALESCE($1, name), email = COALESCE($2, email) WHERE id = $3`,
+        [landlordData.name, landlordData.email, userId]
+      );
+    }
+
+    // Update landlord
+    const updatedLandlord = await client.query(
+      `UPDATE landlord SET
+        company_name = COALESCE($1, company_name)
+       WHERE id = $2
+       RETURNING *`,
+      [landlordData.companyName, id]
+    );
+
+    await client.query('COMMIT');
+
+    return updatedLandlord.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to update landlord.');
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteLandlord(id: string) {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Get landlord's user_id first
+    const landlordResult = await client.query(
+      `SELECT user_id FROM landlord WHERE id = $1`,
+      [id]
+    );
+
+    if (landlordResult.rows.length === 0) {
+      throw new Error('Landlord not found');
+    }
+
+    const userId = landlordResult.rows[0].user_id;
+
+    // Delete landlord (cascade should handle related properties)
+    await client.query(`DELETE FROM landlord WHERE id = $1`, [id]);
+
+    // Delete associated user
+    await client.query(`DELETE FROM user WHERE id = $1`, [userId]);
+
+    await client.query('COMMIT');
+
+    return { success: true };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error:', error);
+    throw new Error('Failed to delete landlord.');
+  } finally {
+    client.release();
+  }
+}
+

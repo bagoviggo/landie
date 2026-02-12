@@ -33,7 +33,7 @@ export type User = {
   name: string;
   email: string;
   password: string;
-  role: 'landlord' | 'tenant'; // Matches Prisma's enum
+  role: 'landlord' | 'tenant' | 'admin'; // Matches Prisma's enum
   createdAt: Date; // Matches Prisma's `DateTime`
 };
 
@@ -170,4 +170,36 @@ export type UnitField = {
   id: string;
   unit_number: string;
   status: string;
+};
+
+// Landlord CRUD types
+export type LandlordData = {
+  id: string;
+  user_id: string;
+  company_name: string;
+  name?: string;
+  email?: string;
+  image?: string;
+};
+
+export type CreateLandlordPayload = {
+  name: string;
+  email: string;
+  password?: string;
+  companyName: string;
+};
+
+export type UpdateLandlordPayload = {
+  name?: string;
+  email?: string;
+  companyName?: string;
+};
+
+export type LandlordsTableType = {
+  id: string;
+  name: string;
+  email: string;
+  company_name: string;
+  image?: string;
+  total_properties: number;
 };

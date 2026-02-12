@@ -30,7 +30,7 @@ export default function Page() {
           </Link>
           <Link
             href="/signup"
-            className="hidden md:inline-block rounded-lg bg-white text-blue-950 px-4 py-2 text-sm font-medium hover:bg-gray-200"
+            className="hidden md:inline-block rounded-lg bg-blue-500 text-white px-4 py-2 text-sm font-medium hover:bg-blue-600"
           >
             Sign Up
           </Link>
@@ -82,7 +82,7 @@ export default function Page() {
             </li>
           </ul>
           <Link
-            href="/get-started"
+            href="/signup"
             className="mt-6 inline-block rounded-lg bg-blue-950 px-6 py-3 text-white text-sm font-medium transition-transform transform hover:scale-105"
           >
             Get Started

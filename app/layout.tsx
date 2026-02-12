@@ -1,6 +1,7 @@
 import "@/app/ui/global.css";
 import { inter } from '@/app/ui/fonts';
 import { CurrencyProvider } from '@/app/context/currency-context';
+import { AuthProvider } from '@/app/context/auth-provider';
 
 export default function RootLayout({
   children,
@@ -10,9 +11,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} antialiased`}>
-        <CurrencyProvider>
-          {children}
-        </CurrencyProvider>
+        <AuthProvider>
+          <CurrencyProvider>
+            {children}
+          </CurrencyProvider>
+        </AuthProvider>
       </body>
     </html>
   );

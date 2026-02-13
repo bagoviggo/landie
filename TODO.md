@@ -1,10 +1,15 @@
-# TODO: Fix bcrypt native module issue
+# Role Functionality Implementation Plan
 
-## Steps to fix the login/signup issue
+## Task: Add role selection functionality to signup/login
 
-- [x] 1. Remove bcrypt from ignoredBuiltDependencies in pnpm-workspace.yaml
-- [x] 2. Clean node_modules and pnpm-lock.yaml
-- [x] 3. Reinstall dependencies with pnpm install
-- [x] 4. Rebuild the Next.js app
-- [x] 5. Test login functionality
+## Steps:
+
+1. [x] Update signup-form.tsx - Add role selection dropdown
+2. [x] Update actions.ts - Handle role selection in signup function
+3. [x] Test the changes
+
+## Notes:
+- The current system already has role-based auth in auth.ts
+- Navigation already shows different links based on user role
+- Role selection is already available during signup
 

@@ -6,6 +6,7 @@ import {
   KeyIcon,
   UserIcon,
   ExclamationCircleIcon,
+  PhoneIcon,
 } from '@heroicons/react/24/outline';
 import { ArrowRightIcon } from '@heroicons/react/20/solid';
 import { Button } from './button';
@@ -63,6 +64,24 @@ export default function SignupForm() {
           <div className="mt-4">
             <label
               className="mb-3 mt-5 block text-xs font-medium text-gray-900"
+              htmlFor="phone"
+            >
+              Phone Number (Optional)
+            </label>
+            <div className="relative">
+              <input
+                className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
+                id="phone"
+                type="tel"
+                name="phone"
+                placeholder="Enter your phone number"
+              />
+              <PhoneIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label
+              className="mb-3 mt-5 block text-xs font-medium text-gray-900"
               htmlFor="password"
             >
               Password
@@ -78,6 +97,27 @@ export default function SignupForm() {
                 minLength={6}
               />
               <KeyIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <label
+              className="mb-3 mt-5 block text-xs font-medium text-gray-900"
+              htmlFor="role"
+            >
+              I am a...
+            </label>
+            <div className="relative">
+              <select
+                className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
+                id="role"
+                name="role"
+                required
+                defaultValue="tenant"
+              >
+                <option value="tenant">Tenant</option>
+                <option value="landlord">Landlord</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
           </div>
         </div>

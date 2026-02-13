@@ -39,19 +39,23 @@ export async function signup(
     name: z.string().min(1, 'Name is required'),
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
+    phone: z.string().optional(),
+    role: z.enum(['tenant', 'landlord', 'admin']).default('tenant'),
   });
 
   const validatedFields = schema.safeParse({
     name: formData.get('name'),
     email: formData.get('email'),
     password: formData.get('password'),
+    phone: formData.get('phone') || undefined,
+    role: formData.get('role') || 'tenant',
   });
 
   if (!validatedFields.success) {
     return validatedFields.error.issues[0].message;
   }
 
-  const { name, email, password } = validatedFields.data;
+  const { name, email, password, phone, role } = validatedFields.data;
 
   try {
     // Check if user already exists
@@ -72,12 +76,16 @@ export async function signup(
         name,
         email,
         hashedPassword,
-        role: 'tenant',
+        phone: phone || null,
+        role,
       },
     });
 
     // Sign in the user after successful registration
-    await signIn('credentials', formData);
+    await signIn('credentials', {
+      email: formData.get('email'),
+      password: formData.get('password'),
+    });
   } catch (error) {
     console.error('Signup error:', error);
     return 'Something went wrong during signup. Please try again.';

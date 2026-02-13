@@ -33,7 +33,7 @@ export type User = {
   name: string;
   email: string;
   password: string;
-  role: 'landlord' | 'tenant'; // Matches Prisma's enum
+  role: 'landlord' | 'tenant' | 'admin'; // Matches Prisma's enum
   createdAt: Date; // Matches Prisma's `DateTime`
 };
 
@@ -109,6 +109,11 @@ export type InvoicesTable = {
 export type TenantField = {
   id: string;
   name: string;
+  email?: string;
+  propertyId?: string;
+  moveInDate?: Date;
+  unitOccupied?: string;
+  emergencyContact?: string;
 };
 
 // Added based on fetchFilteredTenants
@@ -116,7 +121,7 @@ export type TenantsTableType = {
   id: string;
   name: string;
   email: string;
-  image_url?: string;
+  image?: string;
   total_invoices: number;
   total_pending: number;
   total_paid: number;
@@ -127,8 +132,104 @@ export type FormattedTenantsTable = {
   id: string;
   name: string;
   email: string;
-  imageUrl?: string; // Renamed for camelCase consistency
-  totalInvoices: number; // Renamed for camelCase consistency
-  totalPending: number; // Renamed for camelCase consistency
-  totalPaid: number; // Renamed for camelCase consistency
+  imageUrl?: string;
+  totalInvoices: number;
+  totalPending: number;
+  totalPaid: number;
+};
+
+// Tenant CRUD types
+export type CreateTenantPayload = {
+  name: string;
+  email: string;
+  password?: string;
+  propertyId: string;
+  moveInDate: Date;
+  unitOccupied: string;
+  emergencyContact: string;
+};
+
+export type UpdateTenantPayload = {
+  name?: string;
+  email?: string;
+  propertyId?: string;
+  moveInDate?: Date;
+  unitOccupied?: string;
+  emergencyContact?: string;
+};
+
+// Property and Unit types for dropdowns
+export type PropertyField = {
+  id: string;
+  address: string;
+  total_units: number;
+  company_name?: string;
+};
+
+export type UnitField = {
+  id: string;
+  unit_number: string;
+  status: string;
+};
+
+// Landlord CRUD types
+export type LandlordData = {
+  id: string;
+  user_id: string;
+  company_name: string;
+  name?: string;
+  email?: string;
+  image?: string;
+};
+
+export type CreateLandlordPayload = {
+  name: string;
+  email: string;
+  password?: string;
+  companyName: string;
+};
+
+export type UpdateLandlordPayload = {
+  name?: string;
+  email?: string;
+  companyName?: string;
+};
+
+export type LandlordsTableType = {
+  id: string;
+  name: string;
+  email: string;
+  company_name: string;
+  image?: string;
+  total_properties: number;
+};
+
+// Property CRUD types
+export type PropertyData = {
+  id: string;
+  address: string;
+  total_units: number;
+  landlord_id: string;
+  company_name?: string;
+};
+
+export type CreatePropertyPayload = {
+  address: string;
+  totalUnits: number;
+  landlordId: string;
+};
+
+export type UpdatePropertyPayload = {
+  address?: string;
+  totalUnits?: number;
+  landlordId?: string;
+};
+
+export type PropertiesTableType = {
+  id: string;
+  address: string;
+  total_units: number;
+  company_name: string;
+  total_tenants: number;
+  total_units_occupied: number;
 };

@@ -102,7 +102,8 @@ export type InvoicesTable = {
   status: 'pending' | 'paid' | 'late';
   name: string;
   email: string;
-  image_url?: string;
+  image_url?: string | null;
+  phone?: string;
 };
 
 // Added based on fetchTenants
@@ -132,10 +133,10 @@ export type FormattedTenantsTable = {
   id: string;
   name: string;
   email: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   totalInvoices: number;
-  totalPending: number;
-  totalPaid: number;
+  totalPending: string;
+  totalPaid: string;
 };
 
 // Tenant CRUD types
@@ -179,7 +180,7 @@ export type LandlordData = {
   company_name: string;
   name?: string;
   email?: string;
-  image?: string;
+  image?: string | null;
 };
 
 export type CreateLandlordPayload = {

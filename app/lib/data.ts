@@ -9,6 +9,7 @@ import {
 } from './types';
 import { formatCurrency } from '@/app/lib/utils';
 import { tenants, invoices, revenue, users } from './placeholder-data';
+import { Invoice, Tenant, User as PrismaUser } from '@prisma/client';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -67,7 +68,7 @@ export async function fetchLatestInvoices() {
       },
     });
 
-    const latestInvoices = data.map((invoice) => ({
+    const latestInvoices = data.map((invoice: Invoice & { tenant: Tenant & { user: Pick<PrismaUser, 'name' | 'email' | 'image'> } }) => ({
       id: invoice.id,
       name: invoice.tenant.user.name,
       email: invoice.tenant.user.email,
@@ -153,7 +154,16 @@ export async function fetchFilteredInvoices(
       skip: offset,
     });
 
-    return data;
+    return data.map((invoice) => ({
+      id: invoice.id,
+      amount: invoice.amount / 100, // Convert from cents to dollars
+      date: invoice.date,
+      status: invoice.status,
+      name: invoice.tenant.user.name,
+      email: invoice.tenant.user.email,
+      image_url: invoice.tenant.user.image,
+      phone: '', // Phone not available in current schema
+    }));
   } catch (error) {
     console.log('Using placeholder filtered invoices data');
     const lowerQuery = query.toLowerCase();
@@ -176,6 +186,7 @@ export async function fetchFilteredInvoices(
       name: inv.name,
       email: inv.email,
       image_url: inv.image_url,
+      phone: inv.phone || '',
     }));
   }
 }
@@ -303,10 +314,10 @@ export async function fetchFilteredTenants(query: string) {
         id: tenant.id,
         name: tenant.user.name,
         email: tenant.user.email,
-        image: tenant.user.image,
-        total_invoices: tenant.invoices.length,
-        total_pending: formatCurrency(totalPending),
-        total_paid: formatCurrency(totalPaid),
+        imageUrl: tenant.user.image,
+        totalInvoices: tenant.invoices.length,
+        totalPending: formatCurrency(totalPending),
+        totalPaid: formatCurrency(totalPaid),
       };
     });
 
@@ -333,10 +344,10 @@ export async function fetchFilteredTenants(query: string) {
         id: tenant.id,
         name: tenant.name,
         email: tenant.email,
-        image: tenant.image_url,
-        total_invoices: tenantInvoices.length,
-        total_pending: formatCurrency(totalPending),
-        total_paid: formatCurrency(totalPaid),
+        imageUrl: tenant.image_url,
+        totalInvoices: tenantInvoices.length,
+        totalPending: formatCurrency(totalPending),
+        totalPaid: formatCurrency(totalPaid),
       };
     });
   }
@@ -526,13 +537,18 @@ export async function fetchProperties() {
       orderBy: { address: 'asc' },
     });
 
-    return data;
+    return data.map(property => ({
+      id: property.id,
+      address: property.address,
+      total_units: property.totalUnits,
+      company_name: property.landlord.companyName,
+    }));
   } catch (error) {
     console.log('Using placeholder properties data');
     return [
-      { id: '1', address: '123 Main St', totalUnits: 10, company_name: 'Landie Properties' },
-      { id: '2', address: '456 Oak Ave', totalUnits: 8, company_name: 'Landie Properties' },
-      { id: '3', address: '789 Pine Rd', totalUnits: 12, company_name: 'Landie Properties' },
+      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties' },
+      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Landie Properties' },
+      { id: '3', address: '789 Pine Rd', total_units: 12, company_name: 'Landie Properties' },
     ];
   }
 }
@@ -649,22 +665,32 @@ export async function fetchLandlordById(id: string) {
       },
     });
 
-    return data;
+    if (data) {
+      return {
+        id: data.id,
+        user_id: data.userId,
+        company_name: data.companyName,
+        name: data.user.name,
+        email: data.user.email,
+        image: data.user.image,
+      };
+    }
+    return null;
   } catch (error) {
     console.log('Using placeholder landlord by id');
     const landlords = [
       {
         id: '1',
-        userId: 'user1',
-        companyName: 'Landie Properties',
+        user_id: 'user1',
+        company_name: 'Landie Properties',
         name: 'John Doe',
         email: 'john@landie.com',
         image: null,
       },
       {
         id: '2',
-        userId: 'user2',
-        companyName: 'Apex Realty',
+        user_id: 'user2',
+        company_name: 'Apex Realty',
         name: 'Jane Smith',
         email: 'jane@apex.com',
         image: null,

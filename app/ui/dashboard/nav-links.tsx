@@ -6,27 +6,48 @@ import {
   DocumentDuplicateIcon,
   WrenchIcon,
   ChartBarIcon,
+  BuildingOfficeIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import clsx from 'clsx';
 
-// Map of links to display in the side navigation.
-// Depending on the size of the application, this would be stored in a database.
-const links = [
+// Base links visible to all users
+const baseLinks = [
   { name: 'Home', href: '/dashboard', icon: HomeIcon },
-  {
-    name: 'Invoices',
-    href: '/dashboard/invoices',
-    icon: DocumentDuplicateIcon,
-  },
   { name: 'Tenants', href: '/dashboard/tenants', icon: UserGroupIcon },
   { name: 'Maintenance', href: '/dashboard/maintenance', icon: WrenchIcon },
   { name: 'Report and Analytics', href: '/dashboard/report-and-analytics', icon: ChartBarIcon },
 ];
 
+// Role-specific links
+const landlordLinks = [
+  { name: 'Landlords', href: '/dashboard/landlords', icon: BuildingOfficeIcon },
+];
+
+const adminLinks = [
+  { name: 'Properties', href: '/dashboard/properties', icon: BuildingOfficeIcon },
+];
+
 export default function NavLinks() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
+
+  // Build links array based on user role
+  const links = [...baseLinks];
+
+  // Add landlords link only for landlord or admin roles
+  if (userRole === 'landlord' || userRole === 'admin') {
+    links.push(...landlordLinks);
+  }
+
+  // Add properties link only for admin role
+  if (userRole === 'admin') {
+    links.push(...adminLinks);
+  }
+
   return (
     <>
       {links.map((link) => {

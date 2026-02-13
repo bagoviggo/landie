@@ -2,9 +2,9 @@ import Image from 'next/image';
 import { lusitana } from '@/app/ui/fonts';
 import Search from '@/app/ui/search';
 import {
-  TenantsTableType,
   FormattedTenantsTable,
 } from '@/app/lib/types';
+import { EditTenantButton, DeleteTenantButton } from './buttons';
 
 export default async function TenantsTable({
   tenants,
@@ -16,7 +16,6 @@ export default async function TenantsTable({
       <h1 className={`${lusitana.className} mb-8 text-xl md:text-2xl`}>
         Tenants
       </h1>
-      <Search placeholder="Search tenants..." />
       <div className="mt-6 flow-root">
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full align-middle">
@@ -56,8 +55,15 @@ export default async function TenantsTable({
                         <p className="font-medium">{tenant.totalPaid}</p>
                       </div>
                     </div>
-                    <div className="pt-4 text-sm">
-                      <p>{tenant.totalInvoices} invoices</p>
+                    <div className="flex items-center justify-between pt-4">
+                      <div className="flex w-1/2 flex-col">
+                        <p className="text-xs">Invoices</p>
+                        <p className="font-medium">{tenant.totalInvoices}</p>
+                      </div>
+                      <div className="flex w-1/2 justify-end gap-2">
+                        <EditTenantButton id={tenant.id} />
+                        <DeleteTenantButton id={tenant.id} />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -79,6 +85,9 @@ export default async function TenantsTable({
                     </th>
                     <th scope="col" className="px-4 py-5 font-medium">
                       Total Paid
+                    </th>
+                    <th scope="col" className="px-4 py-5 font-medium">
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -107,8 +116,14 @@ export default async function TenantsTable({
                       <td className="whitespace-nowrap bg-white px-4 py-5 text-sm">
                         {tenant.totalPending}
                       </td>
-                      <td className="whitespace-nowrap bg-white px-4 py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md">
+                      <td className="whitespace-nowrap bg-white px-4 py-5 text-sm">
                         {tenant.totalPaid}
+                      </td>
+                      <td className="whitespace-nowrap bg-white px-4 py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md">
+                        <div className="flex gap-2">
+                          <EditTenantButton id={tenant.id} />
+                          <DeleteTenantButton id={tenant.id} />
+                        </div>
                       </td>
                     </tr>
                   ))}

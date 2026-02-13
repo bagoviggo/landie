@@ -21,7 +21,7 @@ export async function fetchRevenue() {
 
     // Sum revenue by month (in case there are multiple entries per month)
     const revenueByMonth: Record<string, number> = {};
-    data.forEach((item) => {
+    data.forEach((item: { month: string; revenue: number }) => {
       revenueByMonth[item.month] = (revenueByMonth[item.month] || 0) + item.revenue;
     });
 

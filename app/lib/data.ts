@@ -9,7 +9,7 @@ import {
 } from './types';
 import { formatCurrency } from '@/app/lib/utils';
 import { tenants, invoices, revenue, users } from './placeholder-data';
-import { Invoice, Tenant, User as PrismaUser } from '@prisma/client';
+import type { Invoice, Tenant, User as PrismaUser, Property as PrismaProperty, Unit as PrismaUnit } from '@prisma/client';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -100,8 +100,8 @@ export async function fetchCardData() {
       }),
     ]);
 
-    const totalPaidInvoices = invoiceStatus.find(s => s.status === 'paid')?._sum?.amount ?? 0;
-    const totalPendingInvoices = invoiceStatus.find(s => s.status === 'pending')?._sum?.amount ?? 0;
+    const totalPaidInvoices = invoiceStatus.find((s: { status: string; _sum: { amount: number | null } }) => s.status === 'paid')?._sum?.amount ?? 0;
+    const totalPendingInvoices = invoiceStatus.find((s: { status: string; _sum: { amount: number | null } }) => s.status === 'pending')?._sum?.amount ?? 0;
 
     return {
       numberOfTenants: tenantCount,

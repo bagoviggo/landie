@@ -1,6 +1,39 @@
 // This file contains placeholder data that you'll be replacing with real data in the Data Fetching chapter:
 // https://nextjs.org/learn/dashboard-app/fetching-data
-const users = [
+
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+}
+
+interface TenantData {
+  id: string;
+  name: string;
+  email: string;
+  image_url: string;
+  phone: string;
+}
+
+interface InvoiceData {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  status: string;
+  date: string;
+  name: string;
+  image_url: string;
+  phone: string;
+  email: string;
+}
+
+interface RevenueData {
+  month: string;
+  revenue: number;
+}
+
+const users: UserData[] = [
   {
     id: '410544b2-4001-4271-9855-fec4b6a6442a',
     name: 'User',
@@ -15,7 +48,7 @@ const users = [
   }
 ];
 
-const tenants = [
+const tenants: TenantData[] = [
   {
     id: 'd6e15727-9fe1-4961-8c5b-ea44a9bd81aa',
     name: 'Evil Rabbit',
@@ -74,7 +107,7 @@ const tenants = [
   },
 ];
 
-const invoices = [
+const invoices: InvoiceData[] = [
   {
     id: '1',
     tenant_id: tenants[0].id,
@@ -220,7 +253,7 @@ const invoices = [
   },
 ];
 
-const revenue = [
+const revenue: RevenueData[] = [
   { month: 'Jan', revenue: 2000 },
   { month: 'Feb', revenue: 1800 },
   { month: 'Mar', revenue: 2200 },

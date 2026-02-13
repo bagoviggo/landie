@@ -1,2 +1,8 @@
-ignoredBuiltDependencies:
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
   - bcrypt
+  - bufferutil
+  - prisma
+  - sharp
+  - utf-8-validate

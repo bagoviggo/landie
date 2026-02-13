@@ -1,12 +1,13 @@
 // lib/db.ts
 import { Pool, QueryResult } from 'pg';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://your_username:your_password@localhost:5432/your_database_name',
-  // Remove SSL for local development
-  // ssl: {
-  //   rejectUnauthorized: false, // For local development; NEVER in production!
-  // },
+  ssl: isProduction ? {
+    rejectUnauthorized: false, // Required for Vercel Postgres/Neon
+  } : undefined,
 });
 
 export default pool;

@@ -3,16 +3,10 @@
 import { signIn } from '@/auth';
 import { AuthError } from 'next-auth';
 import { signOut } from '@/auth';
-import { Pool } from 'pg';
+import { prisma } from '@/app/lib/prisma';
 import * as bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-
-// Database connection
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-});
 
 export async function authenticate(
   prevState: string | undefined,
@@ -61,12 +55,11 @@ export async function signup(
 
   try {
     // Check if user already exists
-    const existingUser = await db.query(
-      `SELECT id FROM "user" WHERE email = $1`,
-      [email]
-    );
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
 
-    if (existingUser.rows.length > 0) {
+    if (existingUser) {
       return 'An account with this email already exists.';
     }
 
@@ -74,11 +67,14 @@ export async function signup(
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    await db.query(
-      `INSERT INTO "user" (name, email, hashed_password, role, created_at)
-       VALUES ($1, $2, $3, 'tenant', NOW())`,
-      [name, email, hashedPassword]
-    );
+    await prisma.user.create({
+      data: {
+        name,
+        email,
+        hashedPassword,
+        role: 'tenant',
+      },
+    });
 
     // Sign in the user after successful registration
     await signIn('credentials', formData);
@@ -90,7 +86,9 @@ export async function signup(
 
 export async function deleteProperty(id: string) {
   try {
-    await db.query(`DELETE FROM property WHERE id = $1`, [id]);
+    await prisma.property.delete({
+      where: { id },
+    });
     redirect('/dashboard/properties');
   } catch (error) {
     console.error('Delete property error:', error);

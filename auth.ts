@@ -2,36 +2,24 @@ import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
-import { Pool } from 'pg';
+import { prisma } from '@/app/lib/prisma';
 import * as bcrypt from 'bcrypt';
-
-// Database connection
-const localDbConfig = {
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-};
-
-const db = new Pool(localDbConfig);
 
 // User validation function
 async function getUser(email: string) {
   try {
-    const result = await db.query(
-      `SELECT id, name, email, hashed_password as "hashedPassword", role FROM "user" WHERE email = $1`,
-      [email]
-    );
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        hashedPassword: true,
+        role: true,
+      },
+    });
     
-    if (result.rows.length === 0) {
-      return null;
-    }
-    
-    return {
-      id: result.rows[0].id,
-      name: result.rows[0].name,
-      email: result.rows[0].email,
-      hashedPassword: result.rows[0].hashedPassword,
-      role: result.rows[0].role,
-    };
+    return user;
   } catch (error) {
     console.error('Failed to fetch user:', error);
     throw new Error('Failed to fetch user.');

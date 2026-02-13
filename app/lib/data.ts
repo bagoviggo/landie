@@ -1,7 +1,4 @@
-import { Pool } from 'pg';
-
-// Use this as createPool for compatibility with the rest of your code
-const createPool = (config: any) => new Pool(config);
+import { prisma } from '@/app/lib/prisma';
 import { 
   Revenue,
   LatestInvoiceRaw,
@@ -10,56 +7,30 @@ import {
   TenantsTableType,
   TenantField
 } from './types';
-import { useCurrency } from '@/app/context/currency-context';
 import { formatCurrency } from '@/app/lib/utils';
 import { tenants, invoices, revenue, users } from './placeholder-data';
-
-// Configure local database connection
-// These can also be set as environment variables
-const localDbConfig = {
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-  max: 5, // Maximum number of clients in the pool
-  connectionTimeoutMillis: 10000, // Connection timeout
-};
-
-// Log connection info for debugging (remove in production)
-console.log('Database connection string exists:', !!process.env.DATABASE_URL);
-
-// Create a custom pool for local development
-const db = createPool(localDbConfig);
-
-// Helper function to execute SQL queries
-async function executeQuery(query: string, params: any[] = []) {
-  if (!process.env.DATABASE_URL) {
-    console.log('Database connection string not provided, using placeholder data');
-    throw new Error('Database connection string not provided');
-  }
-  
-  try {
-    const result = await db.query(query, params);
-    return result;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw error;
-  }
-}
 
 const ITEMS_PER_PAGE = 6;
 
 export async function fetchRevenue() {
   try {
-    const data = await executeQuery(`
-      SELECT month, SUM(revenue) AS total_revenue
-      FROM revenue
-      GROUP BY month
-      ORDER BY month ASC
-      LIMIT 12
-    `);
-    console.log('Revenue data fetched:', data.rows);
+    const data = await prisma.revenue.findMany({
+      orderBy: { month: 'asc' },
+      take: 12,
+    });
 
-    // Reverse the data to display the oldest month first
-    return data.rows.reverse();
+    // Sum revenue by month (in case there are multiple entries per month)
+    const revenueByMonth: Record<string, number> = {};
+    data.forEach((item) => {
+      revenueByMonth[item.month] = (revenueByMonth[item.month] || 0) + item.revenue;
+    });
+
+    const result = Object.entries(revenueByMonth).map(([month, total_revenue]) => ({
+      month,
+      total_revenue,
+    }));
+
+    return result;
   } catch (error) {
     console.log('Using placeholder revenue data');
     // Return placeholder revenue data
@@ -82,41 +53,31 @@ export async function fetchRevenue() {
 
 export async function fetchLatestInvoices() {
   try {
-    // Check if tables exist first
-    const tableCheck = await executeQuery(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'invoice'
-      ) AND EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'tenant'
-      );
-    `);
-    
-    if (!tableCheck.rows[0].exists) {
-      console.error('Tables "invoice" or "tenant" do not exist in the database');
-      return [];
-    }
-    
-    const data = await executeQuery(`
-      SELECT invoice.amount, tenant.name, tenant.image_url, tenant.email, invoice.id
-      FROM invoice
-      JOIN tenant ON invoice.tenant_id = tenant.id
-      ORDER BY invoice.date DESC
-      LIMIT 5
-    `);
+    const data = await prisma.invoice.findMany({
+      take: 5,
+      orderBy: { date: 'desc' },
+      include: {
+        tenant: {
+          include: {
+            user: {
+              select: { name: true, email: true, image: true },
+            },
+          },
+        },
+      },
+    });
 
-    const latestInvoices = data.rows.map((invoice) => ({
-      ...invoice,
+    const latestInvoices = data.map((invoice) => ({
+      id: invoice.id,
+      name: invoice.tenant.user.name,
+      email: invoice.tenant.user.email,
+      image_url: invoice.tenant.user.image,
       amount: formatCurrency(invoice.amount),
     }));
     
     return latestInvoices;
   } catch (error) {
     console.log('Using placeholder latest invoices data');
-    // Return placeholder latest invoices with formatted amounts
     return invoices.slice(0, 5).map((invoice) => ({
       id: invoice.id,
       name: invoice.name,
@@ -130,35 +91,31 @@ export async function fetchLatestInvoices() {
 export async function fetchCardData() {
   try {
     const [invoiceCount, tenantCount, invoiceStatus] = await Promise.all([
-      executeQuery('SELECT COUNT(*) FROM invoice'),
-      executeQuery('SELECT COUNT(*) FROM tenant'),
-      executeQuery(`SELECT
-        SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
-        SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
-        FROM invoice`)
+      prisma.invoice.count(),
+      prisma.tenant.count(),
+      prisma.invoice.groupBy({
+        by: ['status'],
+        _sum: { amount: true },
+      }),
     ]);
 
-    const numberOfInvoices = Number(invoiceCount.rows[0].count ?? '0');
-    const numberOfTenants = Number(tenantCount.rows[0].count ?? '0');
-    const totalPaidInvoices = invoiceStatus.rows[0].paid ?? 0;
-    const totalPendingInvoices = invoiceStatus.rows[0].pending ?? 0;
+    const totalPaidInvoices = invoiceStatus.find(s => s.status === 'paid')?._sum?.amount ?? 0;
+    const totalPendingInvoices = invoiceStatus.find(s => s.status === 'pending')?._sum?.amount ?? 0;
 
     return {
-      numberOfTenants,
-      numberOfInvoices,
+      numberOfTenants: tenantCount,
+      numberOfInvoices: invoiceCount,
       totalPaidInvoices,
       totalPendingInvoices,
     };
   } catch (error) {
     console.log('Using placeholder card data');
-    // Calculate stats from placeholder invoices
-    const placeholderInvoices = invoices;
-    const paidInvoices = placeholderInvoices.filter(inv => inv.status === 'paid');
-    const pendingInvoices = placeholderInvoices.filter(inv => inv.status === 'pending');
+    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
+    const pendingInvoices = invoices.filter(inv => inv.status === 'pending');
     
     return {
       numberOfTenants: tenants.length,
-      numberOfInvoices: placeholderInvoices.length,
+      numberOfInvoices: invoices.length,
       totalPaidInvoices: paidInvoices.reduce((sum, inv) => sum + inv.amount, 0),
       totalPendingInvoices: pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0),
     };
@@ -172,31 +129,33 @@ export async function fetchFilteredInvoices(
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
-    const invoicesData = await executeQuery(`
-      SELECT
-        invoice.id,
-        invoice.amount,
-        invoice.date,
-        invoice.status,
-        tenant.name,
-        tenant.email,
-        tenant.image_url
-      FROM invoice
-      JOIN tenant ON invoice.tenant_id = tenant.id
-      WHERE
-        tenant.name ILIKE $1 OR
-        tenant.email ILIKE $1 OR
-        invoice.amount::text ILIKE $1 OR
-        invoice.date::text ILIKE $1 OR
-        invoice.status ILIKE $1
-      ORDER BY invoice.date DESC
-      LIMIT ${ITEMS_PER_PAGE} OFFSET $2
-    `, [`%${query}%`, offset]);
+    const data = await prisma.invoice.findMany({
+      where: {
+        OR: [
+          { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
+          { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
+          { amount: { equals: isNaN(Number(query)) ? undefined : Number(query) } },
+          { date: { equals: isNaN(Date.parse(query)) ? undefined : new Date(query) } },
+          { status: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        tenant: {
+          include: {
+            user: {
+              select: { name: true, email: true, image: true },
+            },
+          },
+        },
+      },
+      orderBy: { date: 'desc' },
+      take: ITEMS_PER_PAGE,
+      skip: offset,
+    });
 
-    return invoicesData.rows;
+    return data;
   } catch (error) {
     console.log('Using placeholder filtered invoices data');
-    // Filter placeholder invoices based on query
     const lowerQuery = query.toLowerCase();
     const filtered = invoices.filter(inv => 
       inv.name.toLowerCase().includes(lowerQuery) ||
@@ -206,7 +165,6 @@ export async function fetchFilteredInvoices(
       inv.status.toLowerCase().includes(lowerQuery)
     );
     
-    // Apply pagination
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const paginatedInvoices = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
     
@@ -224,23 +182,21 @@ export async function fetchFilteredInvoices(
 
 export async function fetchInvoicesPages(query: string) {
   try {
-    const count = await executeQuery(`
-      SELECT COUNT(*)
-      FROM invoice
-      JOIN tenant ON invoice.tenant_id = tenant.id
-      WHERE
-        tenant.name ILIKE $1 OR
-        tenant.email ILIKE $1 OR
-        invoice.amount::text ILIKE $1 OR
-        invoice.date::text ILIKE $1 OR
-        invoice.status ILIKE $1
-    `, [`%${query}%`]);
+    const count = await prisma.invoice.count({
+      where: {
+        OR: [
+          { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
+          { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
+          { amount: { equals: isNaN(Number(query)) ? undefined : Number(query) } },
+          { date: { equals: isNaN(Date.parse(query)) ? undefined : new Date(query) } },
+          { status: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+    });
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+    return Math.ceil(count / ITEMS_PER_PAGE);
   } catch (error) {
     console.log('Using placeholder invoice pages count');
-    // Count pages from placeholder data
     const lowerQuery = query.toLowerCase();
     const filtered = invoices.filter(inv => 
       inv.name.toLowerCase().includes(lowerQuery) ||
@@ -256,32 +212,31 @@ export async function fetchInvoicesPages(query: string) {
 
 export async function fetchInvoiceById(id: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        invoice.id,
-        invoice.tenant_id,
-        invoice.amount,
-        invoice.status
-      FROM invoice
-      WHERE invoice.id = $1
-    `, [id]);
+    const data = await prisma.invoice.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        tenantId: true,
+        amount: true,
+        status: true,
+      },
+    });
 
-    const invoice = data.rows.map((invoice) => ({
-      ...invoice,
-      // Convert amount from cents to dollars if needed
-      amount: invoice.amount / 100,
-    }));
-    
-    return invoice[0];
+    if (data) {
+      return {
+        ...data,
+        amount: data.amount / 100,
+      };
+    }
+    return null;
   } catch (error) {
     console.log('Using placeholder invoice by id');
-    // Find invoice in placeholder data
     const invoice = invoices.find(inv => inv.id === id);
     if (invoice) {
       return {
         id: invoice.id,
         tenant_id: invoice.tenant_id,
-        amount: invoice.amount / 100, // Convert from cents to dollars
+        amount: invoice.amount / 100,
         status: invoice.status
       };
     }
@@ -291,26 +246,19 @@ export async function fetchInvoiceById(id: string) {
 
 export async function fetchTenants() {
   try {
-    const data = await executeQuery(`
-      SELECT
-        tenant.id,
-        user.name,
-        user.email,
-        user.image,
-        tenant.property_id,
-        tenant.move_in_date,
-        tenant.unit_occupied,
-        tenant.emergency_contact
-      FROM tenant
-      JOIN user ON tenant.user_id = user.id
-      ORDER BY user.name ASC
-    `);
+    const data = await prisma.tenant.findMany({
+      include: {
+        user: {
+          select: { name: true, email: true, image: true },
+        },
+        property: true,
+      },
+      orderBy: { user: { name: 'asc' } },
+    });
 
-    const tenantsData = data.rows;
-    return tenantsData;
+    return data;
   } catch (err) {
     console.log('Using placeholder tenants data');
-    // Return placeholder tenants
     return tenants.map(tenant => ({
       id: tenant.id,
       name: tenant.name,
@@ -326,36 +274,45 @@ export async function fetchTenants() {
 
 export async function fetchFilteredTenants(query: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        tenant.id,
-        user.name,
-        user.email,
-        user.image,
-        COUNT(invoice.id) AS total_invoices,
-        SUM(CASE WHEN invoice.status = 'pending' THEN invoice.amount ELSE 0 END) AS total_pending,
-        SUM(CASE WHEN invoice.status = 'paid' THEN invoice.amount ELSE 0 END) AS total_paid
-      FROM tenant
-      JOIN user ON tenant.user_id = user.id
-      LEFT JOIN invoice ON tenant.id = invoice.tenant_id
-      WHERE
-        user.name ILIKE $1 OR
-        user.email ILIKE $1 OR
-        tenant.unit_occupied ILIKE $1
-      GROUP BY tenant.id, user.name, user.email, user.image
-      ORDER BY user.name ASC
-    `, [`%${query}%`]);
+    const data = await prisma.tenant.findMany({
+      where: {
+        OR: [
+          { user: { name: { contains: query, mode: 'insensitive' } } },
+          { user: { email: { contains: query, mode: 'insensitive' } } },
+          { unitOccupied: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        user: {
+          select: { name: true, email: true, image: true },
+        },
+        invoices: true,
+      },
+      orderBy: { user: { name: 'asc' } },
+    });
 
-    const tenants = data.rows.map((tenant) => ({
-      ...tenant,
-      total_pending: formatCurrency(tenant.total_pending),
-      total_paid: formatCurrency(tenant.total_paid),
-    }));
+    const tenantsWithTotals = data.map((tenant) => {
+      const totalPending = tenant.invoices
+        .filter(inv => inv.status === 'pending')
+        .reduce((sum, inv) => sum + inv.amount, 0);
+      const totalPaid = tenant.invoices
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.amount, 0);
+      
+      return {
+        id: tenant.id,
+        name: tenant.user.name,
+        email: tenant.user.email,
+        image: tenant.user.image,
+        total_invoices: tenant.invoices.length,
+        total_pending: formatCurrency(totalPending),
+        total_paid: formatCurrency(totalPaid),
+      };
+    });
 
-    return tenants;
+    return tenantsWithTotals;
   } catch (err) {
     console.log('Using placeholder filtered tenants data');
-    // Filter placeholder tenants based on query
     const lowerQuery = query.toLowerCase();
     const filtered = tenants.filter(tenant => 
       tenant.name.toLowerCase().includes(lowerQuery) ||
@@ -364,7 +321,6 @@ export async function fetchFilteredTenants(query: string) {
     );
     
     return filtered.map(tenant => {
-      // Find related invoices
       const tenantInvoices = invoices.filter(inv => inv.tenant_id === tenant.id);
       const totalPending = tenantInvoices
         .filter(inv => inv.status === 'pending')
@@ -388,21 +344,19 @@ export async function fetchFilteredTenants(query: string) {
 
 export async function fetchFilteredTenantsPages(query: string) {
   try {
-    const count = await executeQuery(`
-      SELECT COUNT(*)
-      FROM tenant
-      JOIN user ON tenant.user_id = user.id
-      WHERE
-        user.name ILIKE $1 OR
-        user.email ILIKE $1 OR
-        tenant.unit_occupied ILIKE $1
-    `, [`%${query}%`]);
+    const count = await prisma.tenant.count({
+      where: {
+        OR: [
+          { user: { name: { contains: query, mode: 'insensitive' } } },
+          { user: { email: { contains: query, mode: 'insensitive' } } },
+          { unitOccupied: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+    });
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+    return Math.ceil(count / ITEMS_PER_PAGE);
   } catch (error) {
     console.log('Using placeholder tenant pages count');
-    // Count pages from placeholder data
     const lowerQuery = query.toLowerCase();
     const filtered = tenants.filter(tenant => 
       tenant.name.toLowerCase().includes(lowerQuery) ||
@@ -415,31 +369,19 @@ export async function fetchFilteredTenantsPages(query: string) {
 
 export async function fetchTenantById(id: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        tenant.id,
-        tenant.user_id,
-        tenant.property_id,
-        tenant.move_in_date,
-        tenant.unit_occupied,
-        tenant.emergency_contact,
-        user.name,
-        user.email,
-        user.image
-      FROM tenant
-      JOIN user ON tenant.user_id = user.id
-      WHERE tenant.id = $1
-    `, [id]);
+    const data = await prisma.tenant.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { name: true, email: true, image: true },
+        },
+        property: true,
+      },
+    });
 
-    if (data.rows.length === 0) {
-      return null;
-    }
-
-    const tenant = data.rows[0];
-    return tenant;
+    return data;
   } catch (error) {
     console.log('Using placeholder tenant by id');
-    // Find tenant in placeholder data
     const tenant = tenants.find(t => t.id === id);
     if (tenant) {
       return {
@@ -467,38 +409,32 @@ export async function createTenant(tenantData: {
   unitOccupied: string;
   emergencyContact: string;
 }) {
-  const client = await db.connect();
-  
   try {
-    await client.query('BEGIN');
-    
     // Create user first
-    const userResult = await client.query(
-      `INSERT INTO user (name, email, hashed_password, role, created_at)
-       VALUES ($1, $2, $3, 'tenant', NOW())
-       RETURNING id`,
-      [tenantData.name, tenantData.email, tenantData.password || 'defaultpassword']
-    );
-    
-    const userId = userResult.rows[0].id;
+    const user = await prisma.user.create({
+      data: {
+        name: tenantData.name,
+        email: tenantData.email,
+        hashedPassword: tenantData.password || 'defaultpassword',
+        role: 'tenant',
+      },
+    });
     
     // Create tenant linked to user
-    const tenantResult = await client.query(
-      `INSERT INTO tenant (user_id, property_id, move_in_date, unit_occupied, emergency_contact)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [userId, tenantData.propertyId, tenantData.moveInDate, tenantData.unitOccupied, tenantData.emergencyContact]
-    );
+    const tenant = await prisma.tenant.create({
+      data: {
+        userId: user.id,
+        propertyId: tenantData.propertyId,
+        moveInDate: tenantData.moveInDate,
+        unitOccupied: tenantData.unitOccupied,
+        emergencyContact: tenantData.emergencyContact,
+      },
+    });
     
-    await client.query('COMMIT');
-    
-    return tenantResult.rows[0];
+    return tenant;
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to create tenant.');
-  } finally {
-    client.release();
   }
 }
 
@@ -510,166 +446,145 @@ export async function updateTenant(id: string, tenantData: {
   unitOccupied?: string;
   emergencyContact?: string;
 }) {
-  const client = await db.connect();
-  
   try {
-    await client.query('BEGIN');
-    
     // Get tenant's user_id
-    const tenantResult = await client.query(
-      `SELECT user_id FROM tenant WHERE id = $1`,
-      [id]
-    );
+    const existingTenant = await prisma.tenant.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
     
-    if (tenantResult.rows.length === 0) {
+    if (!existingTenant) {
       throw new Error('Tenant not found');
     }
     
-    const userId = tenantResult.rows[0].user_id;
-    
     // Update user if name or email provided
     if (tenantData.name || tenantData.email) {
-      await client.query(
-        `UPDATE user SET name = COALESCE($1, name), email = COALESCE($2, email) WHERE id = $3`,
-        [tenantData.name, tenantData.email, userId]
-      );
+      await prisma.user.update({
+        where: { id: existingTenant.userId },
+        data: {
+          name: tenantData.name,
+          email: tenantData.email,
+        },
+      });
     }
     
     // Update tenant
-    const updatedTenant = await client.query(
-      `UPDATE tenant SET
-        property_id = COALESCE($1, property_id),
-        move_in_date = COALESCE($2, move_in_date),
-        unit_occupied = COALESCE($3, unit_occupied),
-        emergency_contact = COALESCE($4, emergency_contact)
-       WHERE id = $5
-       RETURNING *`,
-      [tenantData.propertyId, tenantData.moveInDate, tenantData.unitOccupied, tenantData.emergencyContact, id]
-    );
+    const updatedTenant = await prisma.tenant.update({
+      where: { id },
+      data: {
+        propertyId: tenantData.propertyId,
+        moveInDate: tenantData.moveInDate,
+        unitOccupied: tenantData.unitOccupied,
+        emergencyContact: tenantData.emergencyContact,
+      },
+    });
     
-    await client.query('COMMIT');
-    
-    return updatedTenant.rows[0];
+    return updatedTenant;
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to update tenant.');
-  } finally {
-    client.release();
   }
 }
 
 export async function deleteTenant(id: string) {
-  const client = await db.connect();
-  
   try {
-    await client.query('BEGIN');
-    
     // Get tenant's user_id first
-    const tenantResult = await client.query(
-      `SELECT user_id FROM tenant WHERE id = $1`,
-      [id]
-    );
+    const existingTenant = await prisma.tenant.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
     
-    if (tenantResult.rows.length === 0) {
+    if (!existingTenant) {
       throw new Error('Tenant not found');
     }
     
-    const userId = tenantResult.rows[0].user_id;
-    
     // Delete tenant (cascade should handle related invoices)
-    await client.query(`DELETE FROM tenant WHERE id = $1`, [id]);
+    await prisma.tenant.delete({
+      where: { id },
+    });
     
     // Delete associated user
-    await client.query(`DELETE FROM user WHERE id = $1`, [userId]);
-    
-    await client.query('COMMIT');
+    await prisma.user.delete({
+      where: { id: existingTenant.userId },
+    });
     
     return { success: true };
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to delete tenant.');
-  } finally {
-    client.release();
   }
 }
 
 export async function fetchProperties() {
   try {
-    const data = await executeQuery(`
-      SELECT
-        property.id,
-        property.address,
-        property.total_units,
-        landlord.company_name
-      FROM property
-      JOIN landlord ON property.landlord_id = landlord.id
-      ORDER BY property.address ASC
-    `);
+    const data = await prisma.property.findMany({
+      include: {
+        landlord: {
+          select: { companyName: true },
+        },
+      },
+      orderBy: { address: 'asc' },
+    });
 
-    return data.rows;
+    return data;
   } catch (error) {
     console.log('Using placeholder properties data');
-    // Return placeholder properties
     return [
-      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties' },
-      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Landie Properties' },
-      { id: '3', address: '789 Pine Rd', total_units: 12, company_name: 'Landie Properties' },
+      { id: '1', address: '123 Main St', totalUnits: 10, company_name: 'Landie Properties' },
+      { id: '2', address: '456 Oak Ave', totalUnits: 8, company_name: 'Landie Properties' },
+      { id: '3', address: '789 Pine Rd', totalUnits: 12, company_name: 'Landie Properties' },
     ];
   }
 }
 
 export async function fetchUnitsByProperty(propertyId: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        unit.id,
-        unit.unit_number,
-        unit.status
-      FROM unit
-      WHERE unit.property_id = $1
-      ORDER BY unit.unit_number ASC
-    `, [propertyId]);
+    const data = await prisma.unit.findMany({
+      where: { propertyId },
+      orderBy: { unitNumber: 'asc' },
+    });
 
-    return data.rows;
+    return data;
   } catch (error) {
     console.log('Using placeholder units data');
-    // Return placeholder units based on property
     return [
-      { id: '1', unit_number: '101', status: 'occupied' },
-      { id: '2', unit_number: '102', status: 'available' },
-      { id: '3', unit_number: '103', status: 'occupied' },
-      { id: '4', unit_number: '104', status: 'available' },
+      { id: '1', unitNumber: '101', status: 'occupied' },
+      { id: '2', unitNumber: '102', status: 'available' },
+      { id: '3', unitNumber: '103', status: 'occupied' },
+      { id: '4', unitNumber: '104', status: 'available' },
     ];
   }
 }
 
 export async function fetchFilteredLandlords(query: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        landlord.id,
-        user.name,
-        user.email,
-        user.image,
-        landlord.company_name,
-        COUNT(property.id) AS total_properties
-      FROM landlord
-      JOIN user ON landlord.user_id = user.id
-      LEFT JOIN property ON landlord.id = property.landlord_id
-      WHERE
-        user.name ILIKE $1 OR
-        user.email ILIKE $1 OR
-        landlord.company_name ILIKE $1
-      GROUP BY landlord.id, user.name, user.email, user.image, landlord.company_name
-      ORDER BY user.name ASC
-    `, [`%${query}%`]);
+    const data = await prisma.landlord.findMany({
+      where: {
+        OR: [
+          { user: { name: { contains: query, mode: 'insensitive' } } },
+          { user: { email: { contains: query, mode: 'insensitive' } } },
+          { companyName: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        user: {
+          select: { name: true, email: true, image: true },
+        },
+        properties: true,
+      },
+      orderBy: { user: { name: 'asc' } },
+    });
 
-    return data.rows;
+    return data.map(landlord => ({
+      id: landlord.id,
+      name: landlord.user.name,
+      email: landlord.user.email,
+      image: landlord.user.image,
+      company_name: landlord.companyName,
+      total_properties: landlord.properties.length,
+    }));
   } catch (err) {
     console.log('Using placeholder filtered landlords data');
-    // Return placeholder landlords
     return [
       {
         id: '1',
@@ -697,21 +612,19 @@ export async function fetchFilteredLandlords(query: string) {
 
 export async function fetchLandlordsPages(query: string) {
   try {
-    const count = await executeQuery(`
-      SELECT COUNT(*)
-      FROM landlord
-      JOIN user ON landlord.user_id = user.id
-      WHERE
-        user.name ILIKE $1 OR
-        user.email ILIKE $1 OR
-        landlord.company_name ILIKE $1
-    `, [`%${query}%`]);
+    const count = await prisma.landlord.count({
+      where: {
+        OR: [
+          { user: { name: { contains: query, mode: 'insensitive' } } },
+          { user: { email: { contains: query, mode: 'insensitive' } } },
+          { companyName: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+    });
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+    return Math.ceil(count / ITEMS_PER_PAGE);
   } catch (error) {
     console.log('Using placeholder landlord pages count');
-    // Count pages from placeholder data
     const filtered = [
       { name: 'John Doe', email: 'john@landie.com', company_name: 'Landie Properties' },
       { name: 'Jane Smith', email: 'jane@apex.com', company_name: 'Apex Realty' },
@@ -727,40 +640,31 @@ export async function fetchLandlordsPages(query: string) {
 
 export async function fetchLandlordById(id: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        landlord.id,
-        landlord.user_id,
-        landlord.company_name,
-        user.name,
-        user.email,
-        user.image
-      FROM landlord
-      JOIN user ON landlord.user_id = user.id
-      WHERE landlord.id = $1
-    `, [id]);
+    const data = await prisma.landlord.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: { name: true, email: true, image: true },
+        },
+      },
+    });
 
-    if (data.rows.length === 0) {
-      return null;
-    }
-
-    return data.rows[0];
+    return data;
   } catch (error) {
     console.log('Using placeholder landlord by id');
-    // Find landlord in placeholder data
     const landlords = [
       {
         id: '1',
-        user_id: 'user1',
-        company_name: 'Landie Properties',
+        userId: 'user1',
+        companyName: 'Landie Properties',
         name: 'John Doe',
         email: 'john@landie.com',
         image: null,
       },
       {
         id: '2',
-        user_id: 'user2',
-        company_name: 'Apex Realty',
+        userId: 'user2',
+        companyName: 'Apex Realty',
         name: 'Jane Smith',
         email: 'jane@apex.com',
         image: null,
@@ -777,38 +681,29 @@ export async function createLandlord(landlordData: {
   password?: string;
   companyName: string;
 }) {
-  const client = await db.connect();
-
   try {
-    await client.query('BEGIN');
-
     // Create user first
-    const userResult = await client.query(
-      `INSERT INTO user (name, email, hashed_password, role, created_at)
-       VALUES ($1, $2, $3, 'landlord', NOW())
-       RETURNING id`,
-      [landlordData.name, landlordData.email, landlordData.password || 'defaultpassword']
-    );
-
-    const userId = userResult.rows[0].id;
+    const user = await prisma.user.create({
+      data: {
+        name: landlordData.name,
+        email: landlordData.email,
+        hashedPassword: landlordData.password || 'defaultpassword',
+        role: 'landlord',
+      },
+    });
 
     // Create landlord linked to user
-    const landlordResult = await client.query(
-      `INSERT INTO landlord (user_id, company_name)
-       VALUES ($1, $2)
-       RETURNING *`,
-      [userId, landlordData.companyName]
-    );
+    const landlord = await prisma.landlord.create({
+      data: {
+        userId: user.id,
+        companyName: landlordData.companyName,
+      },
+    });
 
-    await client.query('COMMIT');
-
-    return landlordResult.rows[0];
+    return landlord;
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to create landlord.');
-  } finally {
-    client.release();
   }
 }
 
@@ -817,113 +712,101 @@ export async function updateLandlord(id: string, landlordData: {
   email?: string;
   companyName?: string;
 }) {
-  const client = await db.connect();
-
   try {
-    await client.query('BEGIN');
-
     // Get landlord's user_id
-    const landlordResult = await client.query(
-      `SELECT user_id FROM landlord WHERE id = $1`,
-      [id]
-    );
+    const existingLandlord = await prisma.landlord.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
 
-    if (landlordResult.rows.length === 0) {
+    if (!existingLandlord) {
       throw new Error('Landlord not found');
     }
 
-    const userId = landlordResult.rows[0].user_id;
-
     // Update user if name or email provided
     if (landlordData.name || landlordData.email) {
-      await client.query(
-        `UPDATE user SET name = COALESCE($1, name), email = COALESCE($2, email) WHERE id = $3`,
-        [landlordData.name, landlordData.email, userId]
-      );
+      await prisma.user.update({
+        where: { id: existingLandlord.userId },
+        data: {
+          name: landlordData.name,
+          email: landlordData.email,
+        },
+      });
     }
 
     // Update landlord
-    const updatedLandlord = await client.query(
-      `UPDATE landlord SET
-        company_name = COALESCE($1, company_name)
-       WHERE id = $2
-       RETURNING *`,
-      [landlordData.companyName, id]
-    );
+    const updatedLandlord = await prisma.landlord.update({
+      where: { id },
+      data: {
+        companyName: landlordData.companyName,
+      },
+    });
 
-    await client.query('COMMIT');
-
-    return updatedLandlord.rows[0];
+    return updatedLandlord;
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to update landlord.');
-  } finally {
-    client.release();
   }
 }
 
 export async function deleteLandlord(id: string) {
-  const client = await db.connect();
-
   try {
-    await client.query('BEGIN');
-
     // Get landlord's user_id first
-    const landlordResult = await client.query(
-      `SELECT user_id FROM landlord WHERE id = $1`,
-      [id]
-    );
+    const existingLandlord = await prisma.landlord.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
 
-    if (landlordResult.rows.length === 0) {
+    if (!existingLandlord) {
       throw new Error('Landlord not found');
     }
 
-    const userId = landlordResult.rows[0].user_id;
-
     // Delete landlord (cascade should handle related properties)
-    await client.query(`DELETE FROM landlord WHERE id = $1`, [id]);
+    await prisma.landlord.delete({
+      where: { id },
+    });
 
     // Delete associated user
-    await client.query(`DELETE FROM user WHERE id = $1`, [userId]);
-
-    await client.query('COMMIT');
+    await prisma.user.delete({
+      where: { id: existingLandlord.userId },
+    });
 
     return { success: true };
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to delete landlord.');
-  } finally {
-    client.release();
   }
 }
 
 export async function fetchFilteredProperties(query: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        property.id,
-        property.address,
-        property.total_units,
-        landlord.company_name,
-        COUNT(tenant.id) AS total_tenants,
-        COUNT(CASE WHEN unit.status = 'occupied' THEN 1 END) AS total_units_occupied
-      FROM property
-      JOIN landlord ON property.landlord_id = landlord.id
-      LEFT JOIN tenant ON property.id = tenant.property_id
-      LEFT JOIN unit ON property.id = unit.property_id
-      WHERE
-        property.address ILIKE $1 OR
-        landlord.company_name ILIKE $1
-      GROUP BY property.id, property.address, property.total_units, landlord.company_name
-      ORDER BY property.address ASC
-    `, [`%${query}%`]);
+    const data = await prisma.property.findMany({
+      where: {
+        OR: [
+          { address: { contains: query, mode: 'insensitive' } },
+          { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
+        ],
+      },
+      include: {
+        landlord: {
+          select: { companyName: true },
+        },
+        tenants: true,
+        units: true,
+      },
+      orderBy: { address: 'asc' },
+    });
 
-    return data.rows;
+    return data.map(property => ({
+      id: property.id,
+      address: property.address,
+      total_units: property.totalUnits,
+      company_name: property.landlord.companyName,
+      total_tenants: property.tenants.length,
+      total_units_occupied: property.units.filter(u => u.status === 'occupied').length,
+    }));
   } catch (err) {
     console.log('Using placeholder filtered properties data');
-    // Return placeholder properties
     return [
       {
         id: '1',
@@ -950,20 +833,18 @@ export async function fetchFilteredProperties(query: string) {
 
 export async function fetchPropertiesPages(query: string) {
   try {
-    const count = await executeQuery(`
-      SELECT COUNT(*)
-      FROM property
-      JOIN landlord ON property.landlord_id = landlord.id
-      WHERE
-        property.address ILIKE $1 OR
-        landlord.company_name ILIKE $1
-    `, [`%${query}%`]);
+    const count = await prisma.property.count({
+      where: {
+        OR: [
+          { address: { contains: query, mode: 'insensitive' } },
+          { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
+        ],
+      },
+    });
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+    return Math.ceil(count / ITEMS_PER_PAGE);
   } catch (error) {
     console.log('Using placeholder properties pages count');
-    // Count pages from placeholder data
     const filtered = [
       { address: '123 Main St', company_name: 'Landie Properties' },
       { address: '456 Oak Ave', company_name: 'Apex Realty' },
@@ -978,40 +859,32 @@ export async function fetchPropertiesPages(query: string) {
 
 export async function fetchPropertyById(id: string) {
   try {
-    const data = await executeQuery(`
-      SELECT
-        property.id,
-        property.address,
-        property.total_units,
-        property.landlord_id,
-        landlord.company_name
-      FROM property
-      JOIN landlord ON property.landlord_id = landlord.id
-      WHERE property.id = $1
-    `, [id]);
+    const data = await prisma.property.findUnique({
+      where: { id },
+      include: {
+        landlord: {
+          select: { companyName: true },
+        },
+      },
+    });
 
-    if (data.rows.length === 0) {
-      return null;
-    }
-
-    return data.rows[0];
+    return data;
   } catch (error) {
     console.log('Using placeholder property by id');
-    // Find property in placeholder data
     const properties = [
       {
         id: '1',
         address: '123 Main St',
-        total_units: 10,
-        landlord_id: 'landlord1',
-        company_name: 'Landie Properties',
+        totalUnits: 10,
+        landlordId: 'landlord1',
+        companyName: 'Landie Properties',
       },
       {
         id: '2',
         address: '456 Oak Ave',
-        total_units: 8,
-        landlord_id: 'landlord2',
-        company_name: 'Apex Realty',
+        totalUnits: 8,
+        landlordId: 'landlord2',
+        companyName: 'Apex Realty',
       },
     ];
 
@@ -1024,27 +897,19 @@ export async function createProperty(propertyData: {
   totalUnits: number;
   landlordId: string;
 }) {
-  const client = await db.connect();
-
   try {
-    await client.query('BEGIN');
+    const result = await prisma.property.create({
+      data: {
+        address: propertyData.address,
+        totalUnits: propertyData.totalUnits,
+        landlordId: propertyData.landlordId,
+      },
+    });
 
-    const result = await client.query(
-      `INSERT INTO property (address, total_units, landlord_id)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [propertyData.address, propertyData.totalUnits, propertyData.landlordId]
-    );
-
-    await client.query('COMMIT');
-
-    return result.rows[0];
+    return result;
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to create property.');
-  } finally {
-    client.release();
   }
 }
 
@@ -1053,51 +918,33 @@ export async function updateProperty(id: string, propertyData: {
   totalUnits?: number;
   landlordId?: string;
 }) {
-  const client = await db.connect();
-
   try {
-    await client.query('BEGIN');
+    const result = await prisma.property.update({
+      where: { id },
+      data: {
+        address: propertyData.address,
+        totalUnits: propertyData.totalUnits,
+        landlordId: propertyData.landlordId,
+      },
+    });
 
-    const result = await client.query(
-      `UPDATE property SET
-        address = COALESCE($1, address),
-        total_units = COALESCE($2, total_units),
-        landlord_id = COALESCE($3, landlord_id)
-       WHERE id = $4
-       RETURNING *`,
-      [propertyData.address, propertyData.totalUnits, propertyData.landlordId, id]
-    );
-
-    await client.query('COMMIT');
-
-    return result.rows[0];
+    return result;
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to update property.');
-  } finally {
-    client.release();
   }
 }
 
 export async function deleteProperty(id: string) {
-  const client = await db.connect();
-
   try {
-    await client.query('BEGIN');
-
-    // Delete property (cascade should handle related tenants and units)
-    await client.query(`DELETE FROM property WHERE id = $1`, [id]);
-
-    await client.query('COMMIT');
+    await prisma.property.delete({
+      where: { id },
+    });
 
     return { success: true };
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error:', error);
     throw new Error('Failed to delete property.');
-  } finally {
-    client.release();
   }
 }
 

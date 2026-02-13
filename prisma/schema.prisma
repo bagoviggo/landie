@@ -1,5 +1,7 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -36,7 +38,7 @@ model Tenant {
   moveInDate       DateTime
   unitOccupied     String
   emergencyContact String
-  user             User      @relation(fields: [userId], references: [id])
+  user             User       @relation(fields: [userId], references: [id])
   property         Property  @relation(fields: [propertyId], references: [id])
   invoices         Invoice[]
   @@map("tenant")
@@ -89,3 +91,4 @@ model Revenue {
   revenue Int
   @@map("revenue")
 }
+

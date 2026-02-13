@@ -89,7 +89,7 @@ export default function EditLandlordForm({ landlord }: { landlord: LandlordData 
           type="text"
           name="companyName"
           id="companyName"
-          defaultValue={landlord.companyName}
+          defaultValue={landlord.company_name}
           required
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />

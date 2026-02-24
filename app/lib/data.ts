@@ -104,7 +104,7 @@ export async function fetchLatestInvoices() {
       },
     });
 
-    const latestInvoices = data.map((invoice) => ({
+    const latestInvoices = data.map((invoice: any) => ({
       id: invoice.id,
       name: invoice.tenant.user.name,
       email: invoice.tenant.user.email,
@@ -136,8 +136,8 @@ export async function fetchCardData() {
       }),
     ]);
 
-    const totalPaidInvoices = invoiceStatus.find((s) => s.status === 'paid')?._sum?.amount ?? 0;
-    const totalPendingInvoices = invoiceStatus.find((s) => s.status === 'pending')?._sum?.amount ?? 0;
+    const totalPaidInvoices = invoiceStatus.find((s: any) => s.status === 'paid')?._sum?.amount ?? 0;
+    const totalPendingInvoices = invoiceStatus.find((s: any) => s.status === 'pending')?._sum?.amount ?? 0;
 
     return {
       numberOfTenants: tenantCount,
@@ -190,7 +190,7 @@ export async function fetchFilteredInvoices(
       skip: offset,
     });
 
-    return data.map((invoice) => ({
+    return data.map((invoice: any) => ({
       id: invoice.id,
       amount: invoice.amount / 100,
       date: invoice.date,
@@ -338,13 +338,13 @@ export async function fetchFilteredTenants(query: string) {
       orderBy: { user: { name: 'asc' } },
     });
 
-    const tenantsWithTotals = data.map((tenant) => {
+    const tenantsWithTotals = data.map((tenant: any) => {
       const totalPending = tenant.invoices
-        .filter((inv) => inv.status === 'pending')
-        .reduce((sum, inv) => sum + inv.amount, 0);
+        .filter((inv: any) => inv.status === 'pending')
+        .reduce((sum: number, inv: any) => sum + inv.amount, 0);
       const totalPaid = tenant.invoices
-        .filter((inv) => inv.status === 'paid')
-        .reduce((sum, inv) => sum + inv.amount, 0);
+        .filter((inv: any) => inv.status === 'paid')
+        .reduce((sum: number, inv: any) => sum + inv.amount, 0);
       
       return {
         id: tenant.id,
@@ -566,7 +566,7 @@ export async function fetchProperties() {
       orderBy: { address: 'asc' },
     });
 
-    return data.map((property) => ({
+    return data.map((property: any) => ({
       id: property.id,
       address: property.address,
       total_units: property.totalUnits,
@@ -619,7 +619,7 @@ export async function fetchFilteredLandlords(query: string) {
       orderBy: { user: { name: 'asc' } },
     });
 
-    return data.map((landlord) => ({
+    return data.map((landlord: any) => ({
       id: landlord.id,
       name: landlord.user.name,
       email: landlord.user.email,
@@ -860,13 +860,13 @@ export async function fetchFilteredProperties(query: string) {
       orderBy: { address: 'asc' },
     });
 
-    return data.map((property) => ({
+    return data.map((property: any) => ({
       id: property.id,
       address: property.address,
       total_units: property.totalUnits,
       company_name: property.landlord.companyName,
       total_tenants: property.tenants.length,
-      total_units_occupied: property.units.filter((u: { status: string }) => u.status === 'occupied').length,
+      total_units_occupied: property.units.filter((u: any) => u.status === 'occupied').length,
     }));
   } catch (err) {
     console.log('Using placeholder filtered properties data');

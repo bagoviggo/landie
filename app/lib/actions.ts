@@ -40,7 +40,7 @@ export async function signup(
     email: z.string().email('Invalid email address'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
     phone: z.string().optional(),
-    role: z.enum(['tenant', 'landlord', 'admin']).default('tenant'),
+    role: z.enum(['tenant', 'landlord']).default('tenant'),
   });
 
   const validatedFields = schema.safeParse({
@@ -86,6 +86,7 @@ export async function signup(
       email: formData.get('email'),
       password: formData.get('password'),
     });
+    redirect('/dashboard');
   } catch (error) {
     console.error('Signup error:', error);
     return 'Something went wrong during signup. Please try again.';

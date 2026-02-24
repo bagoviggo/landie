@@ -18,22 +18,12 @@ async function getUser(email: string) {
         role: true,
       },
     });
-    
     return user;
   } catch (error) {
     console.error('Failed to fetch user:', error);
     throw new Error('Failed to fetch user.');
   }
 }
-
-// Hardcoded admin credentials for testing
-const ADMIN_USER = {
-  id: 'admin-001',
-  name: 'Admin User',
-  email: 'admin@landie.com',
-  password: 'admin123',
-  role: 'admin',
-};
 
 export const { auth, signIn, signOut, handlers } = NextAuth({
   ...authConfig,
@@ -50,28 +40,13 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data;
-          
-          // Check for hardcoded admin user first
-          if (email === ADMIN_USER.email && password === ADMIN_USER.password) {
-            console.log('Admin authentication successful');
-            return {
-              id: ADMIN_USER.id,
-              name: ADMIN_USER.name,
-              email: ADMIN_USER.email,
-              role: ADMIN_USER.role,
-            };
-          }
-          
-          // Fall back to database lookup for regular users
+          // Only check database users
           const user = await getUser(email);
-          
           if (!user) {
             console.log('User not found');
             return null;
           }
-
           const passwordsMatch = await bcrypt.compare(password, user.hashedPassword);
-
           if (passwordsMatch) {
             console.log('Authentication successful');
             return {
@@ -82,7 +57,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             };
           }
         }
-
         console.log('Invalid credentials');
         return null;
       },

@@ -9,9 +9,47 @@ import {
 } from './types';
 import { formatCurrency } from '@/app/lib/utils';
 import { tenants, invoices, revenue, users } from './placeholder-data';
-import type { Invoice, Tenant, User as PrismaUser, Property as PrismaProperty, Unit as PrismaUnit } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const ITEMS_PER_PAGE = 6;
+
+interface InvoiceData {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  status: string;
+  date: string;
+  name: string;
+  image_url: string;
+  phone: string;
+  email: string;
+}
+
+interface TenantData {
+  id: string;
+  name: string;
+  email: string;
+  image_url: string | null;
+  phone?: string;
+}
+
+interface LandlordData {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+  company_name: string;
+  total_properties: number;
+}
+
+interface PropertyData {
+  id: string;
+  address: string;
+  total_units: number;
+  company_name: string;
+  total_tenants?: number;
+  total_units_occupied?: number;
+}
 
 export async function fetchRevenue() {
   try {
@@ -20,7 +58,6 @@ export async function fetchRevenue() {
       take: 12,
     });
 
-    // Sum revenue by month (in case there are multiple entries per month)
     const revenueByMonth: Record<string, number> = {};
     data.forEach((item: { month: string; revenue: number }) => {
       revenueByMonth[item.month] = (revenueByMonth[item.month] || 0) + item.revenue;
@@ -34,7 +71,6 @@ export async function fetchRevenue() {
     return result;
   } catch (error) {
     console.log('Using placeholder revenue data');
-    // Return placeholder revenue data
     return [
       { month: 'Jan', total_revenue: 2000 },
       { month: 'Feb', total_revenue: 1800 },
@@ -68,7 +104,7 @@ export async function fetchLatestInvoices() {
       },
     });
 
-    const latestInvoices = data.map((invoice: Invoice & { tenant: Tenant & { user: Pick<PrismaUser, 'name' | 'email' | 'image'> } }) => ({
+    const latestInvoices = data.map((invoice) => ({
       id: invoice.id,
       name: invoice.tenant.user.name,
       email: invoice.tenant.user.email,
@@ -79,7 +115,7 @@ export async function fetchLatestInvoices() {
     return latestInvoices;
   } catch (error) {
     console.log('Using placeholder latest invoices data');
-    return invoices.slice(0, 5).map((invoice) => ({
+    return invoices.slice(0, 5).map((invoice: InvoiceData) => ({
       id: invoice.id,
       name: invoice.name,
       email: invoice.email,
@@ -100,8 +136,8 @@ export async function fetchCardData() {
       }),
     ]);
 
-    const totalPaidInvoices = invoiceStatus.find((s: { status: string; _sum: { amount: number | null } }) => s.status === 'paid')?._sum?.amount ?? 0;
-    const totalPendingInvoices = invoiceStatus.find((s: { status: string; _sum: { amount: number | null } }) => s.status === 'pending')?._sum?.amount ?? 0;
+    const totalPaidInvoices = invoiceStatus.find((s) => s.status === 'paid')?._sum?.amount ?? 0;
+    const totalPendingInvoices = invoiceStatus.find((s) => s.status === 'pending')?._sum?.amount ?? 0;
 
     return {
       numberOfTenants: tenantCount,
@@ -111,14 +147,14 @@ export async function fetchCardData() {
     };
   } catch (error) {
     console.log('Using placeholder card data');
-    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
-    const pendingInvoices = invoices.filter(inv => inv.status === 'pending');
+    const paidInvoices = invoices.filter((inv: InvoiceData) => inv.status === 'paid');
+    const pendingInvoices = invoices.filter((inv: InvoiceData) => inv.status === 'pending');
     
     return {
       numberOfTenants: tenants.length,
       numberOfInvoices: invoices.length,
-      totalPaidInvoices: paidInvoices.reduce((sum, inv) => sum + inv.amount, 0),
-      totalPendingInvoices: pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0),
+      totalPaidInvoices: paidInvoices.reduce((sum: number, inv: InvoiceData) => sum + inv.amount, 0),
+      totalPendingInvoices: pendingInvoices.reduce((sum: number, inv: InvoiceData) => sum + inv.amount, 0),
     };
   }
 }
@@ -156,18 +192,18 @@ export async function fetchFilteredInvoices(
 
     return data.map((invoice) => ({
       id: invoice.id,
-      amount: invoice.amount / 100, // Convert from cents to dollars
+      amount: invoice.amount / 100,
       date: invoice.date,
       status: invoice.status,
       name: invoice.tenant.user.name,
       email: invoice.tenant.user.email,
       image_url: invoice.tenant.user.image,
-      phone: '', // Phone not available in current schema
+      phone: '',
     }));
   } catch (error) {
     console.log('Using placeholder filtered invoices data');
     const lowerQuery = query.toLowerCase();
-    const filtered = invoices.filter(inv => 
+    const filtered = invoices.filter((inv: InvoiceData) => 
       inv.name.toLowerCase().includes(lowerQuery) ||
       inv.email.toLowerCase().includes(lowerQuery) ||
       inv.amount.toString().includes(lowerQuery) ||
@@ -178,7 +214,7 @@ export async function fetchFilteredInvoices(
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const paginatedInvoices = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
     
-    return paginatedInvoices.map(inv => ({
+    return paginatedInvoices.map((inv: InvoiceData) => ({
       id: inv.id,
       amount: inv.amount,
       date: inv.date,
@@ -209,7 +245,7 @@ export async function fetchInvoicesPages(query: string) {
   } catch (error) {
     console.log('Using placeholder invoice pages count');
     const lowerQuery = query.toLowerCase();
-    const filtered = invoices.filter(inv => 
+    const filtered = invoices.filter((inv: InvoiceData) => 
       inv.name.toLowerCase().includes(lowerQuery) ||
       inv.email.toLowerCase().includes(lowerQuery) ||
       inv.amount.toString().includes(lowerQuery) ||
@@ -227,7 +263,7 @@ export async function fetchInvoiceById(id: string) {
       where: { id },
       select: {
         id: true,
-        tenantId: true,
+        tenant_id: true,
         amount: true,
         status: true,
       },
@@ -242,7 +278,7 @@ export async function fetchInvoiceById(id: string) {
     return null;
   } catch (error) {
     console.log('Using placeholder invoice by id');
-    const invoice = invoices.find(inv => inv.id === id);
+    const invoice = invoices.find((inv: InvoiceData) => inv.id === id);
     if (invoice) {
       return {
         id: invoice.id,
@@ -270,7 +306,7 @@ export async function fetchTenants() {
     return data;
   } catch (err) {
     console.log('Using placeholder tenants data');
-    return tenants.map(tenant => ({
+    return tenants.map((tenant: TenantData) => ({
       id: tenant.id,
       name: tenant.name,
       email: tenant.email,
@@ -304,10 +340,10 @@ export async function fetchFilteredTenants(query: string) {
 
     const tenantsWithTotals = data.map((tenant) => {
       const totalPending = tenant.invoices
-        .filter(inv => inv.status === 'pending')
+        .filter((inv) => inv.status === 'pending')
         .reduce((sum, inv) => sum + inv.amount, 0);
       const totalPaid = tenant.invoices
-        .filter(inv => inv.status === 'paid')
+        .filter((inv) => inv.status === 'paid')
         .reduce((sum, inv) => sum + inv.amount, 0);
       
       return {
@@ -325,20 +361,20 @@ export async function fetchFilteredTenants(query: string) {
   } catch (err) {
     console.log('Using placeholder filtered tenants data');
     const lowerQuery = query.toLowerCase();
-    const filtered = tenants.filter(tenant => 
+    const filtered = tenants.filter((tenant: TenantData) => 
       tenant.name.toLowerCase().includes(lowerQuery) ||
       tenant.email.toLowerCase().includes(lowerQuery) ||
       (tenant.phone && tenant.phone.includes(lowerQuery))
     );
     
-    return filtered.map(tenant => {
-      const tenantInvoices = invoices.filter(inv => inv.tenant_id === tenant.id);
+    return filtered.map((tenant: TenantData) => {
+      const tenantInvoices = invoices.filter((inv: InvoiceData) => inv.tenant_id === tenant.id);
       const totalPending = tenantInvoices
-        .filter(inv => inv.status === 'pending')
-        .reduce((sum, inv) => sum + inv.amount, 0);
+        .filter((inv: InvoiceData) => inv.status === 'pending')
+        .reduce((sum: number, inv: InvoiceData) => sum + inv.amount, 0);
       const totalPaid = tenantInvoices
-        .filter(inv => inv.status === 'paid')
-        .reduce((sum, inv) => sum + inv.amount, 0);
+        .filter((inv: InvoiceData) => inv.status === 'paid')
+        .reduce((sum: number, inv: InvoiceData) => sum + inv.amount, 0);
       
       return {
         id: tenant.id,
@@ -369,7 +405,7 @@ export async function fetchFilteredTenantsPages(query: string) {
   } catch (error) {
     console.log('Using placeholder tenant pages count');
     const lowerQuery = query.toLowerCase();
-    const filtered = tenants.filter(tenant => 
+    const filtered = tenants.filter((tenant: TenantData) => 
       tenant.name.toLowerCase().includes(lowerQuery) ||
       tenant.email.toLowerCase().includes(lowerQuery)
     );
@@ -393,7 +429,7 @@ export async function fetchTenantById(id: string) {
     return data;
   } catch (error) {
     console.log('Using placeholder tenant by id');
-    const tenant = tenants.find(t => t.id === id);
+    const tenant = tenants.find((t: TenantData) => t.id === id);
     if (tenant) {
       return {
         id: tenant.id,
@@ -421,17 +457,16 @@ export async function createTenant(tenantData: {
   emergencyContact: string;
 }) {
   try {
-    // Create user first
+    const hashedPassword = tenantData.password ? await bcrypt.hash(tenantData.password, 10) : await bcrypt.hash('defaultpassword', 10);
     const user = await prisma.user.create({
       data: {
         name: tenantData.name,
         email: tenantData.email,
-        hashedPassword: tenantData.password || 'defaultpassword',
+        hashedPassword,
         role: 'tenant',
       },
     });
     
-    // Create tenant linked to user
     const tenant = await prisma.tenant.create({
       data: {
         userId: user.id,
@@ -458,7 +493,6 @@ export async function updateTenant(id: string, tenantData: {
   emergencyContact?: string;
 }) {
   try {
-    // Get tenant's user_id
     const existingTenant = await prisma.tenant.findUnique({
       where: { id },
       select: { userId: true },
@@ -468,7 +502,6 @@ export async function updateTenant(id: string, tenantData: {
       throw new Error('Tenant not found');
     }
     
-    // Update user if name or email provided
     if (tenantData.name || tenantData.email) {
       await prisma.user.update({
         where: { id: existingTenant.userId },
@@ -479,7 +512,6 @@ export async function updateTenant(id: string, tenantData: {
       });
     }
     
-    // Update tenant
     const updatedTenant = await prisma.tenant.update({
       where: { id },
       data: {
@@ -499,7 +531,6 @@ export async function updateTenant(id: string, tenantData: {
 
 export async function deleteTenant(id: string) {
   try {
-    // Get tenant's user_id first
     const existingTenant = await prisma.tenant.findUnique({
       where: { id },
       select: { userId: true },
@@ -509,12 +540,10 @@ export async function deleteTenant(id: string) {
       throw new Error('Tenant not found');
     }
     
-    // Delete tenant (cascade should handle related invoices)
     await prisma.tenant.delete({
       where: { id },
     });
     
-    // Delete associated user
     await prisma.user.delete({
       where: { id: existingTenant.userId },
     });
@@ -537,7 +566,7 @@ export async function fetchProperties() {
       orderBy: { address: 'asc' },
     });
 
-    return data.map(property => ({
+    return data.map((property) => ({
       id: property.id,
       address: property.address,
       total_units: property.totalUnits,
@@ -546,9 +575,8 @@ export async function fetchProperties() {
   } catch (error) {
     console.log('Using placeholder properties data');
     return [
-      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties' },
-      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Landie Properties' },
-      { id: '3', address: '789 Pine Rd', total_units: 12, company_name: 'Landie Properties' },
+      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties', total_tenants: 8, total_units_occupied: 8 },
+      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Apex Realty', total_tenants: 6, total_units_occupied: 6 },
     ];
   }
 }
@@ -591,7 +619,7 @@ export async function fetchFilteredLandlords(query: string) {
       orderBy: { user: { name: 'asc' } },
     });
 
-    return data.map(landlord => ({
+    return data.map((landlord) => ({
       id: landlord.id,
       name: landlord.user.name,
       email: landlord.user.email,
@@ -618,7 +646,7 @@ export async function fetchFilteredLandlords(query: string) {
         company_name: 'Apex Realty',
         total_properties: 2,
       },
-    ].filter(landlord =>
+    ].filter((landlord: LandlordData) =>
       landlord.name.toLowerCase().includes(query.toLowerCase()) ||
       landlord.email.toLowerCase().includes(query.toLowerCase()) ||
       landlord.company_name.toLowerCase().includes(query.toLowerCase())
@@ -642,9 +670,23 @@ export async function fetchLandlordsPages(query: string) {
   } catch (error) {
     console.log('Using placeholder landlord pages count');
     const filtered = [
-      { name: 'John Doe', email: 'john@landie.com', company_name: 'Landie Properties' },
-      { name: 'Jane Smith', email: 'jane@apex.com', company_name: 'Apex Realty' },
-    ].filter(landlord =>
+      {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@landie.com',
+        image: null,
+        company_name: 'Landie Properties',
+        total_properties: 3,
+      },
+      {
+        id: '2',
+        name: 'Jane Smith',
+        email: 'jane@apex.com',
+        image: null,
+        company_name: 'Apex Realty',
+        total_properties: 2,
+      },
+    ].filter((landlord: LandlordData) =>
       landlord.name.toLowerCase().includes(query.toLowerCase()) ||
       landlord.email.toLowerCase().includes(query.toLowerCase()) ||
       landlord.company_name.toLowerCase().includes(query.toLowerCase())
@@ -686,6 +728,7 @@ export async function fetchLandlordById(id: string) {
         name: 'John Doe',
         email: 'john@landie.com',
         image: null,
+        total_properties: 3,
       },
       {
         id: '2',
@@ -694,10 +737,11 @@ export async function fetchLandlordById(id: string) {
         name: 'Jane Smith',
         email: 'jane@apex.com',
         image: null,
+        total_properties: 2,
       },
     ];
 
-    return landlords.find(l => l.id === id) || null;
+    return landlords.find((l: LandlordData) => l.id === id) || null;
   }
 }
 
@@ -708,17 +752,16 @@ export async function createLandlord(landlordData: {
   companyName: string;
 }) {
   try {
-    // Create user first
+    const hashedPassword = landlordData.password ? await bcrypt.hash(landlordData.password, 10) : await bcrypt.hash('defaultpassword', 10);
     const user = await prisma.user.create({
       data: {
         name: landlordData.name,
         email: landlordData.email,
-        hashedPassword: landlordData.password || 'defaultpassword',
+        hashedPassword,
         role: 'landlord',
       },
     });
 
-    // Create landlord linked to user
     const landlord = await prisma.landlord.create({
       data: {
         userId: user.id,
@@ -739,7 +782,6 @@ export async function updateLandlord(id: string, landlordData: {
   companyName?: string;
 }) {
   try {
-    // Get landlord's user_id
     const existingLandlord = await prisma.landlord.findUnique({
       where: { id },
       select: { userId: true },
@@ -749,7 +791,6 @@ export async function updateLandlord(id: string, landlordData: {
       throw new Error('Landlord not found');
     }
 
-    // Update user if name or email provided
     if (landlordData.name || landlordData.email) {
       await prisma.user.update({
         where: { id: existingLandlord.userId },
@@ -760,7 +801,6 @@ export async function updateLandlord(id: string, landlordData: {
       });
     }
 
-    // Update landlord
     const updatedLandlord = await prisma.landlord.update({
       where: { id },
       data: {
@@ -777,7 +817,6 @@ export async function updateLandlord(id: string, landlordData: {
 
 export async function deleteLandlord(id: string) {
   try {
-    // Get landlord's user_id first
     const existingLandlord = await prisma.landlord.findUnique({
       where: { id },
       select: { userId: true },
@@ -787,12 +826,10 @@ export async function deleteLandlord(id: string) {
       throw new Error('Landlord not found');
     }
 
-    // Delete landlord (cascade should handle related properties)
     await prisma.landlord.delete({
       where: { id },
     });
 
-    // Delete associated user
     await prisma.user.delete({
       where: { id: existingLandlord.userId },
     });
@@ -823,13 +860,13 @@ export async function fetchFilteredProperties(query: string) {
       orderBy: { address: 'asc' },
     });
 
-    return data.map(property => ({
+    return data.map((property) => ({
       id: property.id,
       address: property.address,
       total_units: property.totalUnits,
       company_name: property.landlord.companyName,
       total_tenants: property.tenants.length,
-      total_units_occupied: property.units.filter(u => u.status === 'occupied').length,
+      total_units_occupied: property.units.filter((u: { status: string }) => u.status === 'occupied').length,
     }));
   } catch (err) {
     console.log('Using placeholder filtered properties data');
@@ -850,7 +887,7 @@ export async function fetchFilteredProperties(query: string) {
         total_tenants: 6,
         total_units_occupied: 6,
       },
-    ].filter(property =>
+    ].filter((property: PropertyData) =>
       property.address.toLowerCase().includes(query.toLowerCase()) ||
       property.company_name.toLowerCase().includes(query.toLowerCase())
     );
@@ -872,9 +909,9 @@ export async function fetchPropertiesPages(query: string) {
   } catch (error) {
     console.log('Using placeholder properties pages count');
     const filtered = [
-      { address: '123 Main St', company_name: 'Landie Properties' },
-      { address: '456 Oak Ave', company_name: 'Apex Realty' },
-    ].filter(property =>
+      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties', total_tenants: 8, total_units_occupied: 8 },
+      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Apex Realty', total_tenants: 6, total_units_occupied: 6 },
+    ].filter((property: PropertyData) =>
       property.address.toLowerCase().includes(query.toLowerCase()) ||
       property.company_name.toLowerCase().includes(query.toLowerCase())
     );
@@ -901,20 +938,22 @@ export async function fetchPropertyById(id: string) {
       {
         id: '1',
         address: '123 Main St',
-        totalUnits: 10,
-        landlordId: 'landlord1',
-        companyName: 'Landie Properties',
+        total_units: 10,
+        company_name: 'Landie Properties',
+        total_tenants: 8,
+        total_units_occupied: 8,
       },
       {
         id: '2',
         address: '456 Oak Ave',
-        totalUnits: 8,
-        landlordId: 'landlord2',
-        companyName: 'Apex Realty',
+        total_units: 8,
+        company_name: 'Apex Realty',
+        total_tenants: 6,
+        total_units_occupied: 6,
       },
     ];
 
-    return properties.find(p => p.id === id) || null;
+    return properties.find((p: PropertyData) => p.id === id) || null;
   }
 }
 

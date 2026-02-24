@@ -116,7 +116,6 @@ export default function SignupForm() {
               >
                 <option value="tenant">Tenant</option>
                 <option value="landlord">Landlord</option>
-                <option value="admin">Admin</option>
               </select>
             </div>
           </div>
@@ -148,4 +147,4 @@ function SignupButton() {
     </Button>
   );
 }
- 
+

@@ -8,6 +8,8 @@ node_modules/
 out/
 
 # Environment
+.env
+.env.production
 .env*.local
 .env.development
 
@@ -22,3 +24,5 @@ yarn-error.log*
 
 # Development
 /app/seed/
+tsconfig.tsbuildinfo
+cookies.txt

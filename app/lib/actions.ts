@@ -82,15 +82,25 @@ export async function signup(
     });
 
     // Sign in the user after successful registration
+    // signIn throws a redirect internally — let it propagate by NOT catching it here
     await signIn('credentials', {
       email: formData.get('email'),
       password: formData.get('password'),
+      redirect: false, // we handle redirect ourselves below
     });
-    redirect('/dashboard');
   } catch (error) {
+    // AuthError means credentials failed after account creation — shouldn't happen
+    // but handle gracefully
+    if (error instanceof AuthError) {
+      return 'Account created but sign-in failed. Please log in manually.';
+    }
     console.error('Signup error:', error);
     return 'Something went wrong during signup. Please try again.';
   }
+
+  // redirect() must be called outside try/catch — it throws internally
+  // and a catch block would swallow it
+  redirect('/dashboard');
 }
 
 export async function deleteProperty(id: string) {
@@ -98,10 +108,10 @@ export async function deleteProperty(id: string) {
     await prisma.property.delete({
       where: { id },
     });
-    redirect('/dashboard/properties');
   } catch (error) {
     console.error('Delete property error:', error);
     throw new Error('Failed to delete property.');
   }
+  // redirect outside try/catch for same reason as above
+  redirect('/dashboard/properties');
 }
-

@@ -10,11 +10,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { ArrowRightIcon } from '@heroicons/react/20/solid';
 import { Button } from './button';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { signup } from '@/app/lib/actions';
 
 export default function SignupForm() {
-  const [errorMessage, dispatch] = useFormState(signup, undefined);
+  const [errorMessage, dispatch] = useActionState(signup, undefined);
 
   return (
     <form action={dispatch} className="space-y-3">
@@ -147,4 +148,3 @@ function SignupButton() {
     </Button>
   );
 }
-

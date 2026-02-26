@@ -24,6 +24,7 @@ const baseLinks = [
 // Role-specific links
 const landlordLinks = [
   { name: 'Landlords', href: '/dashboard/landlords', icon: BuildingOfficeIcon },
+  { name: 'Properties', href: '/dashboard/properties', icon: HomeIcon },
 ];
 
 const adminLinks = [

@@ -3,22 +3,22 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
-  id        String     @id @default(uuid())
-  name      String
-  email     String     @unique
-  hashedPassword  String
-  image     String?
-  role      String
-  phone     String?
-  createdAt DateTime   @default(now())
-  landlords Landlord[]
-  tenants   Tenant[]
+  id             String     @id @default(uuid())
+  name           String
+  email          String     @unique
+  hashedPassword String
+  image          String?
+  role           String
+  phone          String?
+  createdAt      DateTime   @default(now())
+  landlords      Landlord[]
+  tenants        Tenant[]
   @@map("user")
 }
 
@@ -26,6 +26,8 @@ model Landlord {
   id          String     @id @default(uuid())
   userId      String
   companyName String
+  approvedAt  DateTime?  // null = pending approval, set = approved
+  approvedBy  String?    // id of the admin who approved
   user        User       @relation(fields: [userId], references: [id])
   properties  Property[]
   @@map("landlord")
@@ -38,7 +40,7 @@ model Tenant {
   moveInDate       DateTime
   unitOccupied     String
   emergencyContact String
-  user             User       @relation(fields: [userId], references: [id])
+  user             User      @relation(fields: [userId], references: [id])
   property         Property  @relation(fields: [propertyId], references: [id])
   invoices         Invoice[]
   @@map("tenant")
@@ -56,11 +58,11 @@ model Property {
 }
 
 model Unit {
-  id          String        @id @default(uuid())
-  propertyId  String
-  unitNumber  String
-  status      String
-  property    Property      @relation(fields: [propertyId], references: [id])
+  id           String        @id @default(uuid())
+  propertyId   String
+  unitNumber   String
+  status       String
+  property     Property      @relation(fields: [propertyId], references: [id])
   maintenances Maintenance[]
   @@map("unit")
 }

@@ -16,7 +16,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.7.4",
     "next": "15.5.12",
-    "next-auth": "5.0.0-beta.19",
+    "next-auth": "5.0.0-beta.25",
     "postcss": "8.4.38",
     "prisma": "^6.6.0",
     "react": "19",

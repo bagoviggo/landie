@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { prisma } from '@/app/lib/prisma';
 import * as bcrypt from 'bcrypt';
 
-// User validation function
 async function getUser(email: string) {
   try {
     const user = await prisma.user.findUnique({
@@ -16,6 +15,10 @@ async function getUser(email: string) {
         email: true,
         hashedPassword: true,
         role: true,
+        landlords: {
+          select: { approvedAt: true },
+          take: 1,
+        },
       },
     });
     return user;
@@ -30,53 +33,37 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
   providers: [
     Credentials({
       async authorize(credentials) {
-        // Parse and validate credentials
         const parsedCredentials = z
-          .object({ 
-            email: z.string().email(), 
-            password: z.string().min(6) 
+          .object({
+            email: z.string().email(),
+            password: z.string().min(6),
           })
           .safeParse(credentials);
 
-        if (parsedCredentials.success) {
-          const { email, password } = parsedCredentials.data;
-          // Only check database users
-          const user = await getUser(email);
-          if (!user) {
-            console.log('User not found');
-            return null;
-          }
-          const passwordsMatch = await bcrypt.compare(password, user.hashedPassword);
-          if (passwordsMatch) {
-            console.log('Authentication successful');
-            return {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role,
-            };
-          }
-        }
-        console.log('Invalid credentials');
-        return null;
+        if (!parsedCredentials.success) return null;
+
+        const { email, password } = parsedCredentials.data;
+        const user = await getUser(email);
+
+        if (!user) return null;
+
+        const passwordsMatch = await bcrypt.compare(password, user.hashedPassword);
+        if (!passwordsMatch) return null;
+
+        // For landlords check approval status, everyone else is considered approved
+        const isApproved =
+          user.role === 'landlord'
+            ? !!user.landlords[0]?.approvedAt
+            : true;
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isApproved,
+        };
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-      }
-      return session;
-    },
-  },
 });
-

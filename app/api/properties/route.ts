@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFilteredProperties, fetchPropertiesPages, createProperty } from '@/app/lib/data';
 import { CreatePropertyPayload } from '@/app/lib/types';
+import { requireAuth } from '@/app/lib/api-auth';
 
 export async function GET(request: NextRequest) {
+  const session = await requireAuth();
+  if (session instanceof NextResponse) return session;
+
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query') || '';
@@ -25,6 +29,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await requireAuth();
+  if (session instanceof NextResponse) return session;
+
   try {
     const body: CreatePropertyPayload = await request.json();
 

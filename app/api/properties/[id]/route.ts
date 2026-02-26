@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchPropertyById, updateProperty, deleteProperty } from '@/app/lib/data';
 import { UpdatePropertyPayload } from '@/app/lib/types';
+import { requireAuth } from '@/app/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const session = await requireAuth();
+  if (session instanceof NextResponse) return session;
+
   try {
-    const property = await fetchPropertyById(params.id);
+    const { id } = await props.params;
+    const property = await fetchPropertyById(id);
 
     if (!property) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
@@ -22,13 +27,16 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const session = await requireAuth();
+  if (session instanceof NextResponse) return session;
+
   try {
+    const { id } = await props.params;
     const body: UpdatePropertyPayload = await request.json();
 
-    const property = await updateProperty(params.id, body);
-
+    const property = await updateProperty(id, body);
     return NextResponse.json(property);
   } catch (error) {
     console.error('Error updating property:', error);
@@ -38,11 +46,14 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
-  try {
-    await deleteProperty(params.id);
+  const session = await requireAuth();
+  if (session instanceof NextResponse) return session;
 
+  try {
+    const { id } = await props.params;
+    await deleteProperty(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting property:', error);

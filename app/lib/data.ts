@@ -51,8 +51,34 @@ interface PropertyData {
   total_units_occupied?: number;
 }
 
-export async function fetchRevenue() {
+// ─── Revenue ────────────────────────────────────────────────────────────────
+
+export async function fetchRevenue(landlordId?: string | null) {
   try {
+    // If scoped to a landlord, sum invoice amounts by month instead of revenue table
+    if (landlordId) {
+      const data = await prisma.invoice.findMany({
+        where: {
+          tenant: {
+            property: { landlordId },
+          },
+          status: 'paid',
+        },
+        select: { amount: true, date: true },
+      });
+
+      const revenueByMonth: Record<string, number> = {};
+      data.forEach((item) => {
+        const month = new Date(item.date).toLocaleString('default', { month: 'short' });
+        revenueByMonth[month] = (revenueByMonth[month] || 0) + item.amount;
+      });
+
+      return Object.entries(revenueByMonth).map(([month, total_revenue]) => ({
+        month,
+        total_revenue,
+      }));
+    }
+
     const data = await prisma.revenue.findMany({
       orderBy: { month: 'asc' },
       take: 12,
@@ -63,12 +89,10 @@ export async function fetchRevenue() {
       revenueByMonth[item.month] = (revenueByMonth[item.month] || 0) + item.revenue;
     });
 
-    const result = Object.entries(revenueByMonth).map(([month, total_revenue]) => ({
+    return Object.entries(revenueByMonth).map(([month, total_revenue]) => ({
       month,
       total_revenue,
     }));
-
-    return result;
   } catch (error) {
     console.log('Using placeholder revenue data');
     return [
@@ -88,9 +112,14 @@ export async function fetchRevenue() {
   }
 }
 
-export async function fetchLatestInvoices() {
+// ─── Dashboard ──────────────────────────────────────────────────────────────
+
+export async function fetchLatestInvoices(landlordId?: string | null) {
   try {
     const data = await prisma.invoice.findMany({
+      where: landlordId
+        ? { tenant: { property: { landlordId } } }
+        : undefined,
       take: 5,
       orderBy: { date: 'desc' },
       include: {
@@ -104,15 +133,13 @@ export async function fetchLatestInvoices() {
       },
     });
 
-    const latestInvoices = data.map((invoice: any) => ({
+    return data.map((invoice: any) => ({
       id: invoice.id,
       name: invoice.tenant.user.name,
       email: invoice.tenant.user.email,
       image_url: invoice.tenant.user.image,
       amount: formatCurrency(invoice.amount),
     }));
-    
-    return latestInvoices;
   } catch (error) {
     console.log('Using placeholder latest invoices data');
     return invoices.slice(0, 5).map((invoice: InvoiceData) => ({
@@ -125,13 +152,22 @@ export async function fetchLatestInvoices() {
   }
 }
 
-export async function fetchCardData() {
+export async function fetchCardData(landlordId?: string | null) {
   try {
+    const tenantWhere = landlordId
+      ? { property: { landlordId } }
+      : undefined;
+
+    const invoiceWhere = landlordId
+      ? { tenant: { property: { landlordId } } }
+      : undefined;
+
     const [invoiceCount, tenantCount, invoiceStatus] = await Promise.all([
-      prisma.invoice.count(),
-      prisma.tenant.count(),
+      prisma.invoice.count({ where: invoiceWhere }),
+      prisma.tenant.count({ where: tenantWhere }),
       prisma.invoice.groupBy({
         by: ['status'],
+        where: invoiceWhere,
         _sum: { amount: true },
       }),
     ]);
@@ -149,7 +185,6 @@ export async function fetchCardData() {
     console.log('Using placeholder card data');
     const paidInvoices = invoices.filter((inv: InvoiceData) => inv.status === 'paid');
     const pendingInvoices = invoices.filter((inv: InvoiceData) => inv.status === 'pending');
-    
     return {
       numberOfTenants: tenants.length,
       numberOfInvoices: invoices.length,
@@ -159,29 +194,38 @@ export async function fetchCardData() {
   }
 }
 
+// ─── Invoices ────────────────────────────────────────────────────────────────
+
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
+  landlordId?: string | null,
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const scopeFilter = landlordId
+    ? { tenant: { property: { landlordId } } }
+    : {};
 
   try {
     const data = await prisma.invoice.findMany({
       where: {
-        OR: [
-          { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
-          { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
-          { amount: { equals: isNaN(Number(query)) ? undefined : Number(query) } },
-          { date: { equals: isNaN(Date.parse(query)) ? undefined : new Date(query) } },
-          { status: { contains: query, mode: 'insensitive' } },
+        AND: [
+          scopeFilter,
+          {
+            OR: [
+              { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
+              { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
+              { amount: { equals: isNaN(Number(query)) ? undefined : Number(query) } },
+              { status: { contains: query, mode: 'insensitive' } },
+            ],
+          },
         ],
       },
       include: {
         tenant: {
           include: {
-            user: {
-              select: { name: true, email: true, image: true },
-            },
+            user: { select: { name: true, email: true, image: true } },
           },
         },
       },
@@ -203,18 +247,14 @@ export async function fetchFilteredInvoices(
   } catch (error) {
     console.log('Using placeholder filtered invoices data');
     const lowerQuery = query.toLowerCase();
-    const filtered = invoices.filter((inv: InvoiceData) => 
+    const filtered = invoices.filter((inv: InvoiceData) =>
       inv.name.toLowerCase().includes(lowerQuery) ||
       inv.email.toLowerCase().includes(lowerQuery) ||
       inv.amount.toString().includes(lowerQuery) ||
-      inv.date.includes(lowerQuery) ||
       inv.status.toLowerCase().includes(lowerQuery)
     );
-    
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const paginatedInvoices = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    
-    return paginatedInvoices.map((inv: InvoiceData) => ({
+    return filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE).map((inv: InvoiceData) => ({
       id: inv.id,
       amount: inv.amount,
       date: inv.date,
@@ -227,33 +267,29 @@ export async function fetchFilteredInvoices(
   }
 }
 
-export async function fetchInvoicesPages(query: string) {
+export async function fetchInvoicesPages(query: string, landlordId?: string | null) {
+  const scopeFilter = landlordId
+    ? { tenant: { property: { landlordId } } }
+    : {};
+
   try {
     const count = await prisma.invoice.count({
       where: {
-        OR: [
-          { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
-          { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
-          { amount: { equals: isNaN(Number(query)) ? undefined : Number(query) } },
-          { date: { equals: isNaN(Date.parse(query)) ? undefined : new Date(query) } },
-          { status: { contains: query, mode: 'insensitive' } },
+        AND: [
+          scopeFilter,
+          {
+            OR: [
+              { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
+              { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
+              { status: { contains: query, mode: 'insensitive' } },
+            ],
+          },
         ],
       },
     });
-
     return Math.ceil(count / ITEMS_PER_PAGE);
   } catch (error) {
-    console.log('Using placeholder invoice pages count');
-    const lowerQuery = query.toLowerCase();
-    const filtered = invoices.filter((inv: InvoiceData) => 
-      inv.name.toLowerCase().includes(lowerQuery) ||
-      inv.email.toLowerCase().includes(lowerQuery) ||
-      inv.amount.toString().includes(lowerQuery) ||
-      inv.date.includes(lowerQuery) ||
-      inv.status.toLowerCase().includes(lowerQuery)
-    );
-    
-    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    return 1;
   }
 }
 
@@ -261,91 +297,66 @@ export async function fetchInvoiceById(id: string) {
   try {
     const data = await prisma.invoice.findUnique({
       where: { id },
-      select: {
-        id: true,
-        tenant_id: true,
-        amount: true,
-        status: true,
-      },
+      select: { id: true, tenant_id: true, amount: true, status: true },
     });
-
-    if (data) {
-      return {
-        ...data,
-        amount: data.amount / 100,
-      };
-    }
+    if (data) return { ...data, amount: data.amount / 100 };
     return null;
   } catch (error) {
-    console.log('Using placeholder invoice by id');
     const invoice = invoices.find((inv: InvoiceData) => inv.id === id);
-    if (invoice) {
-      return {
-        id: invoice.id,
-        tenant_id: invoice.tenant_id,
-        amount: invoice.amount / 100,
-        status: invoice.status
-      };
-    }
+    if (invoice) return { id: invoice.id, tenant_id: invoice.tenant_id, amount: invoice.amount / 100, status: invoice.status };
     return null;
   }
 }
 
-export async function fetchTenants() {
+// ─── Tenants ─────────────────────────────────────────────────────────────────
+
+export async function fetchTenants(landlordId?: string | null) {
   try {
     const data = await prisma.tenant.findMany({
+      where: landlordId ? { property: { landlordId } } : undefined,
       include: {
-        user: {
-          select: { name: true, email: true, image: true },
-        },
+        user: { select: { name: true, email: true, image: true } },
         property: true,
       },
       orderBy: { user: { name: 'asc' } },
     });
-
     return data;
   } catch (err) {
-    console.log('Using placeholder tenants data');
-    return tenants.map((tenant: TenantData) => ({
-      id: tenant.id,
-      name: tenant.name,
-      email: tenant.email,
-      image: tenant.image_url,
-      property_id: null,
-      move_in_date: null,
-      unit_occupied: null,
-      emergency_contact: null,
-    }));
+    return [];
   }
 }
 
-export async function fetchFilteredTenants(query: string) {
+export async function fetchFilteredTenants(query: string, landlordId?: string | null) {
+  const scopeFilter = landlordId ? { property: { landlordId } } : {};
+
   try {
     const data = await prisma.tenant.findMany({
       where: {
-        OR: [
-          { user: { name: { contains: query, mode: 'insensitive' } } },
-          { user: { email: { contains: query, mode: 'insensitive' } } },
-          { unitOccupied: { contains: query, mode: 'insensitive' } },
+        AND: [
+          scopeFilter,
+          {
+            OR: [
+              { user: { name: { contains: query, mode: 'insensitive' } } },
+              { user: { email: { contains: query, mode: 'insensitive' } } },
+              { unitOccupied: { contains: query, mode: 'insensitive' } },
+            ],
+          },
         ],
       },
       include: {
-        user: {
-          select: { name: true, email: true, image: true },
-        },
+        user: { select: { name: true, email: true, image: true } },
         invoices: true,
       },
       orderBy: { user: { name: 'asc' } },
     });
 
-    const tenantsWithTotals = data.map((tenant: any) => {
+    return data.map((tenant: any) => {
       const totalPending = tenant.invoices
         .filter((inv: any) => inv.status === 'pending')
         .reduce((sum: number, inv: any) => sum + inv.amount, 0);
       const totalPaid = tenant.invoices
         .filter((inv: any) => inv.status === 'paid')
         .reduce((sum: number, inv: any) => sum + inv.amount, 0);
-      
       return {
         id: tenant.id,
         name: tenant.user.name,
@@ -356,93 +367,45 @@ export async function fetchFilteredTenants(query: string) {
         totalPaid: formatCurrency(totalPaid),
       };
     });
-
-    return tenantsWithTotals;
   } catch (err) {
-    console.log('Using placeholder filtered tenants data');
-    const lowerQuery = query.toLowerCase();
-    const filtered = tenants.filter((tenant: TenantData) => 
-      tenant.name.toLowerCase().includes(lowerQuery) ||
-      tenant.email.toLowerCase().includes(lowerQuery) ||
-      (tenant.phone && tenant.phone.includes(lowerQuery))
-    );
-    
-    return filtered.map((tenant: TenantData) => {
-      const tenantInvoices = invoices.filter((inv: InvoiceData) => inv.tenant_id === tenant.id);
-      const totalPending = tenantInvoices
-        .filter((inv: InvoiceData) => inv.status === 'pending')
-        .reduce((sum: number, inv: InvoiceData) => sum + inv.amount, 0);
-      const totalPaid = tenantInvoices
-        .filter((inv: InvoiceData) => inv.status === 'paid')
-        .reduce((sum: number, inv: InvoiceData) => sum + inv.amount, 0);
-      
-      return {
-        id: tenant.id,
-        name: tenant.name,
-        email: tenant.email,
-        imageUrl: tenant.image_url,
-        totalInvoices: tenantInvoices.length,
-        totalPending: formatCurrency(totalPending),
-        totalPaid: formatCurrency(totalPaid),
-      };
-    });
+    return [];
   }
 }
 
-export async function fetchFilteredTenantsPages(query: string) {
+export async function fetchFilteredTenantsPages(query: string, landlordId?: string | null) {
+  const scopeFilter = landlordId ? { property: { landlordId } } : {};
+
   try {
     const count = await prisma.tenant.count({
       where: {
-        OR: [
-          { user: { name: { contains: query, mode: 'insensitive' } } },
-          { user: { email: { contains: query, mode: 'insensitive' } } },
-          { unitOccupied: { contains: query, mode: 'insensitive' } },
+        AND: [
+          scopeFilter,
+          {
+            OR: [
+              { user: { name: { contains: query, mode: 'insensitive' } } },
+              { user: { email: { contains: query, mode: 'insensitive' } } },
+              { unitOccupied: { contains: query, mode: 'insensitive' } },
+            ],
+          },
         ],
       },
     });
-
     return Math.ceil(count / ITEMS_PER_PAGE);
   } catch (error) {
-    console.log('Using placeholder tenant pages count');
-    const lowerQuery = query.toLowerCase();
-    const filtered = tenants.filter((tenant: TenantData) => 
-      tenant.name.toLowerCase().includes(lowerQuery) ||
-      tenant.email.toLowerCase().includes(lowerQuery)
-    );
-    
-    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    return 1;
   }
 }
 
 export async function fetchTenantById(id: string) {
   try {
-    const data = await prisma.tenant.findUnique({
+    return await prisma.tenant.findUnique({
       where: { id },
       include: {
-        user: {
-          select: { name: true, email: true, image: true },
-        },
+        user: { select: { name: true, email: true, image: true } },
         property: true,
       },
     });
-
-    return data;
   } catch (error) {
-    console.log('Using placeholder tenant by id');
-    const tenant = tenants.find((t: TenantData) => t.id === id);
-    if (tenant) {
-      return {
-        id: tenant.id,
-        user_id: null,
-        property_id: null,
-        move_in_date: null,
-        unit_occupied: null,
-        emergency_contact: null,
-        name: tenant.name,
-        email: tenant.email,
-        image: tenant.image_url,
-      };
-    }
     return null;
   }
 }
@@ -457,7 +420,7 @@ export async function createTenant(tenantData: {
   emergencyContact: string;
 }) {
   try {
-    const hashedPassword = tenantData.password ? await bcrypt.hash(tenantData.password, 10) : await bcrypt.hash('defaultpassword', 10);
+    const hashedPassword = await bcrypt.hash(tenantData.password || 'defaultpassword', 10);
     const user = await prisma.user.create({
       data: {
         name: tenantData.name,
@@ -466,8 +429,7 @@ export async function createTenant(tenantData: {
         role: 'tenant',
       },
     });
-    
-    const tenant = await prisma.tenant.create({
+    return await prisma.tenant.create({
       data: {
         userId: user.id,
         propertyId: tenantData.propertyId,
@@ -476,8 +438,6 @@ export async function createTenant(tenantData: {
         emergencyContact: tenantData.emergencyContact,
       },
     });
-    
-    return tenant;
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to create tenant.');
@@ -493,26 +453,17 @@ export async function updateTenant(id: string, tenantData: {
   emergencyContact?: string;
 }) {
   try {
-    const existingTenant = await prisma.tenant.findUnique({
-      where: { id },
-      select: { userId: true },
-    });
-    
-    if (!existingTenant) {
-      throw new Error('Tenant not found');
-    }
-    
+    const existing = await prisma.tenant.findUnique({ where: { id }, select: { userId: true } });
+    if (!existing) throw new Error('Tenant not found');
+
     if (tenantData.name || tenantData.email) {
       await prisma.user.update({
-        where: { id: existingTenant.userId },
-        data: {
-          name: tenantData.name,
-          email: tenantData.email,
-        },
+        where: { id: existing.userId },
+        data: { name: tenantData.name, email: tenantData.email },
       });
     }
-    
-    const updatedTenant = await prisma.tenant.update({
+
+    return await prisma.tenant.update({
       where: { id },
       data: {
         propertyId: tenantData.propertyId,
@@ -521,8 +472,6 @@ export async function updateTenant(id: string, tenantData: {
         emergencyContact: tenantData.emergencyContact,
       },
     });
-    
-    return updatedTenant;
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to update tenant.');
@@ -531,23 +480,10 @@ export async function updateTenant(id: string, tenantData: {
 
 export async function deleteTenant(id: string) {
   try {
-    const existingTenant = await prisma.tenant.findUnique({
-      where: { id },
-      select: { userId: true },
-    });
-    
-    if (!existingTenant) {
-      throw new Error('Tenant not found');
-    }
-    
-    await prisma.tenant.delete({
-      where: { id },
-    });
-    
-    await prisma.user.delete({
-      where: { id: existingTenant.userId },
-    });
-    
+    const existing = await prisma.tenant.findUnique({ where: { id }, select: { userId: true } });
+    if (!existing) throw new Error('Tenant not found');
+    await prisma.tenant.delete({ where: { id } });
+    await prisma.user.delete({ where: { id: existing.userId } });
     return { success: true };
   } catch (error) {
     console.error('Database Error:', error);
@@ -555,17 +491,17 @@ export async function deleteTenant(id: string) {
   }
 }
 
-export async function fetchProperties() {
+// ─── Properties ──────────────────────────────────────────────────────────────
+
+export async function fetchProperties(landlordId?: string | null) {
   try {
     const data = await prisma.property.findMany({
+      where: landlordId ? { landlordId } : undefined,
       include: {
-        landlord: {
-          select: { companyName: true },
-        },
+        landlord: { select: { companyName: true } },
       },
       orderBy: { address: 'asc' },
     });
-
     return data.map((property: any) => ({
       id: property.id,
       address: property.address,
@@ -573,32 +509,152 @@ export async function fetchProperties() {
       company_name: property.landlord.companyName,
     }));
   } catch (error) {
-    console.log('Using placeholder properties data');
-    return [
-      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties', total_tenants: 8, total_units_occupied: 8 },
-      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Apex Realty', total_tenants: 6, total_units_occupied: 6 },
-    ];
+    return [];
   }
 }
+
+export async function fetchFilteredProperties(query: string, landlordId?: string | null) {
+  const scopeFilter = landlordId ? { landlordId } : {};
+
+  try {
+    const data = await prisma.property.findMany({
+      where: {
+        AND: [
+          scopeFilter,
+          {
+            OR: [
+              { address: { contains: query, mode: 'insensitive' } },
+              { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
+            ],
+          },
+        ],
+      },
+      include: {
+        landlord: { select: { companyName: true } },
+        tenants: true,
+        units: true,
+      },
+      orderBy: { address: 'asc' },
+    });
+
+    return data.map((property: any) => ({
+      id: property.id,
+      address: property.address,
+      totalUnits: property.totalUnits,
+      total_units: property.totalUnits,
+      landlordId: property.landlordId,
+      company_name: property.landlord.companyName,
+      total_tenants: property.tenants.length,
+      total_units_occupied: property.units.filter((u: any) => u.status === 'occupied').length,
+    }));
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function fetchPropertiesPages(query: string, landlordId?: string | null) {
+  const scopeFilter = landlordId ? { landlordId } : {};
+
+  try {
+    const count = await prisma.property.count({
+      where: {
+        AND: [
+          scopeFilter,
+          {
+            OR: [
+              { address: { contains: query, mode: 'insensitive' } },
+              { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
+            ],
+          },
+        ],
+      },
+    });
+    return Math.ceil(count / ITEMS_PER_PAGE);
+  } catch (error) {
+    return 1;
+  }
+}
+
+export async function fetchPropertyById(id: string) {
+  try {
+    return await prisma.property.findUnique({
+      where: { id },
+      include: { landlord: { select: { companyName: true } } },
+    });
+  } catch (error) {
+    return null;
+  }
+}
+
+export async function createProperty(propertyData: {
+  address: string;
+  totalUnits: number;
+  landlordId: string;
+  unitNames?: string[];
+}) {
+  try {
+    const { unitNames, ...prismaData } = propertyData;
+    const property = await prisma.property.create({ data: prismaData });
+
+    const names =
+      unitNames && unitNames.length > 0
+        ? unitNames
+        : Array.from({ length: propertyData.totalUnits }, (_, i) =>
+            String(i + 1).padStart(3, '0'),
+          );
+
+    await prisma.unit.createMany({
+      data: names.map((unitNumber) => ({
+        propertyId: property.id,
+        unitNumber,
+        status: 'available',
+      })),
+    });
+
+    return property;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to create property.');
+  }
+}
+
+export async function updateProperty(id: string, propertyData: {
+  address?: string;
+  totalUnits?: number;
+  landlordId?: string;
+}) {
+  try {
+    return await prisma.property.update({ where: { id }, data: propertyData });
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to update property.');
+  }
+}
+
+export async function deleteProperty(id: string) {
+  try {
+    await prisma.property.delete({ where: { id } });
+    return { success: true };
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to delete property.');
+  }
+}
+
+// ─── Units ───────────────────────────────────────────────────────────────────
 
 export async function fetchUnitsByProperty(propertyId: string) {
   try {
-    const data = await prisma.unit.findMany({
+    return await prisma.unit.findMany({
       where: { propertyId },
       orderBy: { unitNumber: 'asc' },
     });
-
-    return data;
   } catch (error) {
-    console.log('Using placeholder units data');
-    return [
-      { id: '1', unitNumber: '101', status: 'occupied' },
-      { id: '2', unitNumber: '102', status: 'available' },
-      { id: '3', unitNumber: '103', status: 'occupied' },
-      { id: '4', unitNumber: '104', status: 'available' },
-    ];
+    return [];
   }
 }
+
+// ─── Landlords ───────────────────────────────────────────────────────────────
 
 export async function fetchFilteredLandlords(query: string) {
   try {
@@ -611,9 +667,7 @@ export async function fetchFilteredLandlords(query: string) {
         ],
       },
       include: {
-        user: {
-          select: { name: true, email: true, image: true },
-        },
+        user: { select: { name: true, email: true, image: true } },
         properties: true,
       },
       orderBy: { user: { name: 'asc' } },
@@ -628,29 +682,7 @@ export async function fetchFilteredLandlords(query: string) {
       total_properties: landlord.properties.length,
     }));
   } catch (err) {
-    console.log('Using placeholder filtered landlords data');
-    return [
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@landie.com',
-        image: null,
-        company_name: 'Landie Properties',
-        total_properties: 3,
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane@apex.com',
-        image: null,
-        company_name: 'Apex Realty',
-        total_properties: 2,
-      },
-    ].filter((landlord: LandlordData) =>
-      landlord.name.toLowerCase().includes(query.toLowerCase()) ||
-      landlord.email.toLowerCase().includes(query.toLowerCase()) ||
-      landlord.company_name.toLowerCase().includes(query.toLowerCase())
-    );
+    return [];
   }
 }
 
@@ -665,34 +697,9 @@ export async function fetchLandlordsPages(query: string) {
         ],
       },
     });
-
     return Math.ceil(count / ITEMS_PER_PAGE);
   } catch (error) {
-    console.log('Using placeholder landlord pages count');
-    const filtered = [
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@landie.com',
-        image: null,
-        company_name: 'Landie Properties',
-        total_properties: 3,
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane@apex.com',
-        image: null,
-        company_name: 'Apex Realty',
-        total_properties: 2,
-      },
-    ].filter((landlord: LandlordData) =>
-      landlord.name.toLowerCase().includes(query.toLowerCase()) ||
-      landlord.email.toLowerCase().includes(query.toLowerCase()) ||
-      landlord.company_name.toLowerCase().includes(query.toLowerCase())
-    );
-
-    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    return 1;
   }
 }
 
@@ -700,48 +707,19 @@ export async function fetchLandlordById(id: string) {
   try {
     const data = await prisma.landlord.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: { name: true, email: true, image: true },
-        },
-      },
+      include: { user: { select: { name: true, email: true, image: true } } },
     });
-
-    if (data) {
-      return {
-        id: data.id,
-        user_id: data.userId,
-        company_name: data.companyName,
-        name: data.user.name,
-        email: data.user.email,
-        image: data.user.image,
-      };
-    }
-    return null;
+    if (!data) return null;
+    return {
+      id: data.id,
+      user_id: data.userId,
+      company_name: data.companyName,
+      name: data.user.name,
+      email: data.user.email,
+      image: data.user.image,
+    };
   } catch (error) {
-    console.log('Using placeholder landlord by id');
-    const landlords = [
-      {
-        id: '1',
-        user_id: 'user1',
-        company_name: 'Landie Properties',
-        name: 'John Doe',
-        email: 'john@landie.com',
-        image: null,
-        total_properties: 3,
-      },
-      {
-        id: '2',
-        user_id: 'user2',
-        company_name: 'Apex Realty',
-        name: 'Jane Smith',
-        email: 'jane@apex.com',
-        image: null,
-        total_properties: 2,
-      },
-    ];
-
-    return landlords.find((l: LandlordData) => l.id === id) || null;
+    return null;
   }
 }
 
@@ -752,7 +730,7 @@ export async function createLandlord(landlordData: {
   companyName: string;
 }) {
   try {
-    const hashedPassword = landlordData.password ? await bcrypt.hash(landlordData.password, 10) : await bcrypt.hash('defaultpassword', 10);
+    const hashedPassword = await bcrypt.hash(landlordData.password || 'defaultpassword', 10);
     const user = await prisma.user.create({
       data: {
         name: landlordData.name,
@@ -761,15 +739,9 @@ export async function createLandlord(landlordData: {
         role: 'landlord',
       },
     });
-
-    const landlord = await prisma.landlord.create({
-      data: {
-        userId: user.id,
-        companyName: landlordData.companyName,
-      },
+    return await prisma.landlord.create({
+      data: { userId: user.id, companyName: landlordData.companyName },
     });
-
-    return landlord;
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to create landlord.');
@@ -782,33 +754,20 @@ export async function updateLandlord(id: string, landlordData: {
   companyName?: string;
 }) {
   try {
-    const existingLandlord = await prisma.landlord.findUnique({
-      where: { id },
-      select: { userId: true },
-    });
-
-    if (!existingLandlord) {
-      throw new Error('Landlord not found');
-    }
+    const existing = await prisma.landlord.findUnique({ where: { id }, select: { userId: true } });
+    if (!existing) throw new Error('Landlord not found');
 
     if (landlordData.name || landlordData.email) {
       await prisma.user.update({
-        where: { id: existingLandlord.userId },
-        data: {
-          name: landlordData.name,
-          email: landlordData.email,
-        },
+        where: { id: existing.userId },
+        data: { name: landlordData.name, email: landlordData.email },
       });
     }
 
-    const updatedLandlord = await prisma.landlord.update({
+    return await prisma.landlord.update({
       where: { id },
-      data: {
-        companyName: landlordData.companyName,
-      },
+      data: { companyName: landlordData.companyName },
     });
-
-    return updatedLandlord;
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to update landlord.');
@@ -817,199 +776,13 @@ export async function updateLandlord(id: string, landlordData: {
 
 export async function deleteLandlord(id: string) {
   try {
-    const existingLandlord = await prisma.landlord.findUnique({
-      where: { id },
-      select: { userId: true },
-    });
-
-    if (!existingLandlord) {
-      throw new Error('Landlord not found');
-    }
-
-    await prisma.landlord.delete({
-      where: { id },
-    });
-
-    await prisma.user.delete({
-      where: { id: existingLandlord.userId },
-    });
-
+    const existing = await prisma.landlord.findUnique({ where: { id }, select: { userId: true } });
+    if (!existing) throw new Error('Landlord not found');
+    await prisma.landlord.delete({ where: { id } });
+    await prisma.user.delete({ where: { id: existing.userId } });
     return { success: true };
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to delete landlord.');
   }
 }
-
-export async function fetchFilteredProperties(query: string) {
-  try {
-    const data = await prisma.property.findMany({
-      where: {
-        OR: [
-          { address: { contains: query, mode: 'insensitive' } },
-          { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
-        ],
-      },
-      include: {
-        landlord: {
-          select: { companyName: true },
-        },
-        tenants: true,
-        units: true,
-      },
-      orderBy: { address: 'asc' },
-    });
-
-    return data.map((property: any) => ({
-      id: property.id,
-      address: property.address,
-      total_units: property.totalUnits,
-      company_name: property.landlord.companyName,
-      total_tenants: property.tenants.length,
-      total_units_occupied: property.units.filter((u: any) => u.status === 'occupied').length,
-    }));
-  } catch (err) {
-    console.log('Using placeholder filtered properties data');
-    return [
-      {
-        id: '1',
-        address: '123 Main St',
-        total_units: 10,
-        company_name: 'Landie Properties',
-        total_tenants: 8,
-        total_units_occupied: 8,
-      },
-      {
-        id: '2',
-        address: '456 Oak Ave',
-        total_units: 8,
-        company_name: 'Apex Realty',
-        total_tenants: 6,
-        total_units_occupied: 6,
-      },
-    ].filter((property: PropertyData) =>
-      property.address.toLowerCase().includes(query.toLowerCase()) ||
-      property.company_name.toLowerCase().includes(query.toLowerCase())
-    );
-  }
-}
-
-export async function fetchPropertiesPages(query: string) {
-  try {
-    const count = await prisma.property.count({
-      where: {
-        OR: [
-          { address: { contains: query, mode: 'insensitive' } },
-          { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
-        ],
-      },
-    });
-
-    return Math.ceil(count / ITEMS_PER_PAGE);
-  } catch (error) {
-    console.log('Using placeholder properties pages count');
-    const filtered = [
-      { id: '1', address: '123 Main St', total_units: 10, company_name: 'Landie Properties', total_tenants: 8, total_units_occupied: 8 },
-      { id: '2', address: '456 Oak Ave', total_units: 8, company_name: 'Apex Realty', total_tenants: 6, total_units_occupied: 6 },
-    ].filter((property: PropertyData) =>
-      property.address.toLowerCase().includes(query.toLowerCase()) ||
-      property.company_name.toLowerCase().includes(query.toLowerCase())
-    );
-
-    return Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  }
-}
-
-export async function fetchPropertyById(id: string) {
-  try {
-    const data = await prisma.property.findUnique({
-      where: { id },
-      include: {
-        landlord: {
-          select: { companyName: true },
-        },
-      },
-    });
-
-    return data;
-  } catch (error) {
-    console.log('Using placeholder property by id');
-    const properties = [
-      {
-        id: '1',
-        address: '123 Main St',
-        total_units: 10,
-        company_name: 'Landie Properties',
-        total_tenants: 8,
-        total_units_occupied: 8,
-      },
-      {
-        id: '2',
-        address: '456 Oak Ave',
-        total_units: 8,
-        company_name: 'Apex Realty',
-        total_tenants: 6,
-        total_units_occupied: 6,
-      },
-    ];
-
-    return properties.find((p: PropertyData) => p.id === id) || null;
-  }
-}
-
-export async function createProperty(propertyData: {
-  address: string;
-  totalUnits: number;
-  landlordId: string;
-}) {
-  try {
-    const result = await prisma.property.create({
-      data: {
-        address: propertyData.address,
-        totalUnits: propertyData.totalUnits,
-        landlordId: propertyData.landlordId,
-      },
-    });
-
-    return result;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to create property.');
-  }
-}
-
-export async function updateProperty(id: string, propertyData: {
-  address?: string;
-  totalUnits?: number;
-  landlordId?: string;
-}) {
-  try {
-    const result = await prisma.property.update({
-      where: { id },
-      data: {
-        address: propertyData.address,
-        totalUnits: propertyData.totalUnits,
-        landlordId: propertyData.landlordId,
-      },
-    });
-
-    return result;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to update property.');
-  }
-}
-
-export async function deleteProperty(id: string) {
-  try {
-    await prisma.property.delete({
-      where: { id },
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to delete property.');
-  }
-}
-

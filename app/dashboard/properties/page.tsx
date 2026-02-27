@@ -5,18 +5,21 @@ import PropertiesTable from '@/app/ui/properties/table';
 import { lusitana } from '@/app/ui/fonts';
 import Search from '@/app/ui/search';
 import { PropertiesTableSkeleton } from '@/app/ui/skeletons';
+import { auth } from '@/auth';
+import Pagination from '@/app/ui/invoices/pagination';
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams?: {
-    query?: string;
-    page?: string;
-  };
+  searchParams?: Promise<{ query?: string; page?: string }>;
 }) {
-  const query = searchParams?.query || '';
-  const currentPage = Number(searchParams?.page) || 1;
-  const totalPages = await fetchPropertiesPages(query);
+  const session = await auth();
+  const landlordId = (session?.user as any)?.landlordId ?? null;
+
+  const params = await searchParams;
+  const query = params?.query || '';
+  const currentPage = Number(params?.page) || 1;
+  const totalPages = await fetchPropertiesPages(query, landlordId);
 
   return (
     <div className="w-full">
@@ -28,10 +31,10 @@ export default async function Page({
         <CreateProperty />
       </div>
       <Suspense key={query + currentPage} fallback={<PropertiesTableSkeleton />}>
-        <PropertiesTable query={query} currentPage={currentPage} />
+        <PropertiesTable query={query} currentPage={currentPage} landlordId={landlordId} />
       </Suspense>
       <div className="mt-5 flex w-full justify-center">
-        {/* Pagination can be added here if needed */}
+        <Pagination totalPages={totalPages} />
       </div>
     </div>
   );

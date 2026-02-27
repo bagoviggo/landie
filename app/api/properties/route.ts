@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFilteredProperties, fetchPropertiesPages, createProperty } from '@/app/lib/data';
-import { CreatePropertyPayload } from '@/app/lib/types';
 import { requireAuth } from '@/app/lib/api-auth';
 
 export async function GET(request: NextRequest) {
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
   if (session instanceof NextResponse) return session;
 
   try {
-    const body: CreatePropertyPayload = await request.json();
+    const body = await request.json();
 
     if (!body.address || !body.totalUnits || !body.landlordId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -43,6 +42,7 @@ export async function POST(request: NextRequest) {
       address: body.address,
       totalUnits: body.totalUnits,
       landlordId: body.landlordId,
+      unitNames: Array.isArray(body.unitNames) ? body.unitNames : undefined,
     });
 
     return NextResponse.json(property, { status: 201 });

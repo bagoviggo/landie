@@ -1,29 +1,23 @@
 import { generateYAxis } from '@/app/lib/utils';
 import { CalendarIcon } from '@heroicons/react/24/outline';
 import { lusitana } from '@/app/ui/fonts';
-import { Revenue } from '@/app/lib/types';
 import { fetchRevenue } from '@/app/lib/data';
 
-export default async function RevenueChart() {
-  const revenue = await fetchRevenue();
+export default async function RevenueChart({ landlordId }: { landlordId?: string | null }) {
+  const revenue = await fetchRevenue(landlordId);
   const chartHeight = 350;
 
-  // Generate y-axis labels and scaling factor
   const { yAxisLabels, topLabel } = generateYAxis(
     revenue.map((month) => ({ revenue: month.total_revenue }))
   );
 
   if (!revenue || revenue.length === 0) {
-    return <p className="mt-4 text-gray-400">No data available.</p>;
+    return <p className="mt-4 text-gray-400">No revenue data available.</p>;
   }
 
-  // Sort months in chronological order by year and month
   const sortedRevenue = revenue.sort((a, b) => {
-    const [yearA, monthA] = a.month.split('-').map(Number);
-    const [yearB, monthB] = b.month.split('-').map(Number);
-
-    // Compare by year first, then by month
-    return yearA === yearB ? monthA - monthB : yearA - yearB;
+    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
   });
 
   return (
@@ -36,17 +30,13 @@ export default async function RevenueChart() {
           {/* Y-Axis Labels */}
           <div
             className="mb-6 hidden flex-col justify-between text-sm text-gray-400 sm:flex"
-            style={{
-              height: `${chartHeight}px`,
-              marginRight: '2rem', // Increased margin for better spacing
-            }}
+            style={{ height: `${chartHeight}px`, marginRight: '2rem' }}
           >
             {yAxisLabels.reverse().map((label) => (
               <p key={label}>{label}</p>
             ))}
           </div>
 
-          {/* Bars for Each Month */}
           {sortedRevenue.map((month) => (
             <div key={month.month} className="flex flex-col items-center gap-2">
               <div
@@ -54,11 +44,9 @@ export default async function RevenueChart() {
                 style={{
                   height: `${(chartHeight / topLabel) * month.total_revenue}px`,
                 }}
-              ></div>
+              />
               <p className="-rotate-90 text-sm text-gray-400 sm:rotate-0">
-                {new Date(`${month.month}-01`).toLocaleDateString('en-US', {
-                  month: 'short',
-                })}
+                {month.month}
               </p>
             </div>
           ))}

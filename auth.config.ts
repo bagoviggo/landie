@@ -20,41 +20,41 @@ export const authConfig = {
       const isOnSignup = path.startsWith('/signup');
       const isOnPendingApproval = path.startsWith('/pending-approval');
 
-      // Not logged in
       if (!isLoggedIn) {
         if (isOnDashboard || isOnPendingApproval) return false;
         return true;
       }
 
-      // Logged in as an unapproved landlord
+      // Unapproved landlords can only see the pending page
       if (role === 'landlord' && !isApproved) {
         if (isOnPendingApproval) return true;
         return Response.redirect(new URL('/pending-approval', nextUrl));
       }
 
-      // Logged in and approved — redirect away from login/signup
+      // Logged in users redirected away from login/signup
       if (isOnLogin || isOnSignup) {
         return Response.redirect(new URL('/dashboard', nextUrl));
       }
 
       return true;
     },
-    // JWT and session callbacks live here so they run in BOTH
-    // edge (middleware) and Node.js (API routes) contexts
+
     async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        // Default to true for non-landlords (admins, tenants)
         token.isApproved = user.isApproved ?? true;
+        token.landlordId = user.landlordId ?? null;
       }
       return token;
     },
+
     async session({ session, token }: any) {
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.isApproved = token.isApproved;
+        session.user.landlordId = token.landlordId;
       }
       return session;
     },

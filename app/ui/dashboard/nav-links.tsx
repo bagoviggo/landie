@@ -3,50 +3,48 @@
 import {
   UserGroupIcon,
   HomeIcon,
-  DocumentDuplicateIcon,
   WrenchIcon,
   ChartBarIcon,
   BuildingOfficeIcon,
+  ShieldCheckIcon,
+  DocumentDuplicateIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import clsx from 'clsx';
 
-// Base links visible to all users
 const baseLinks = [
   { name: 'Home', href: '/dashboard', icon: HomeIcon },
+  { name: 'Invoices', href: '/dashboard/invoices', icon: DocumentDuplicateIcon },
   { name: 'Tenants', href: '/dashboard/tenants', icon: UserGroupIcon },
   { name: 'Maintenance', href: '/dashboard/maintenance', icon: WrenchIcon },
-  { name: 'Report and Analytics', href: '/dashboard/report-and-analytics', icon: ChartBarIcon },
+  { name: 'Reports', href: '/dashboard/report-and-analytics', icon: ChartBarIcon },
 ];
 
-// Role-specific links
 const landlordLinks = [
-  { name: 'Landlords', href: '/dashboard/landlords', icon: BuildingOfficeIcon },
-  { name: 'Properties', href: '/dashboard/properties', icon: HomeIcon },
+  { name: 'Properties', href: '/dashboard/properties', icon: BuildingOfficeIcon },
 ];
 
 const adminLinks = [
+  { name: 'Landlords', href: '/dashboard/landlords', icon: UserGroupIcon },
   { name: 'Properties', href: '/dashboard/properties', icon: BuildingOfficeIcon },
+  { name: 'Admin Panel', href: '/dashboard/admin', icon: ShieldCheckIcon },
 ];
 
 export default function NavLinks() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const userRole = session?.user?.role;
+  const userRole = (session?.user as any)?.role;
 
-  // Build links array based on user role
-  const links = [...baseLinks];
+  let links = [...baseLinks];
 
-  // Add landlords link only for landlord or admin roles
-  if (userRole === 'landlord' || userRole === 'admin') {
-    links.push(...landlordLinks);
+  if (userRole === 'landlord') {
+    links = [...links, ...landlordLinks];
   }
 
-  // Add properties link only for admin role
   if (userRole === 'admin') {
-    links.push(...adminLinks);
+    links = [...links, ...adminLinks];
   }
 
   return (
@@ -55,7 +53,7 @@ export default function NavLinks() {
         const LinkIcon = link.icon;
         return (
           <Link
-            key={link.name}
+            key={link.href}
             href={link.href}
             className={clsx(
               'flex h-[48px] grow items-center justify-center gap-2 rounded-md bg-gray-50 p-3 text-sm font-medium hover:bg-sky-100 hover:text-blue-600 md:flex-none md:justify-start md:p-2 md:px-3',

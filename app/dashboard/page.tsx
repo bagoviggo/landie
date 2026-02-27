@@ -4,19 +4,21 @@ import LatestInvoices from '@/app/ui/dashboard/latest-invoices';
 import { lusitana } from '@/app/ui/fonts';
 import { fetchCardData } from '@/app/lib/data';
 import { Suspense } from 'react';
-import {
-  RevenueChartSkeleton,
-  LatestInvoicesSkeleton,
-} from '@/app/ui/skeletons';
+import { RevenueChartSkeleton, LatestInvoicesSkeleton } from '@/app/ui/skeletons';
 import { CurrencyToggle } from '@/app/ui/currency-display';
+import { auth } from '@/auth';
 
 export default async function Page() {
+  const session = await auth();
+  const landlordId = (session?.user as any)?.landlordId ?? null;
+
   const {
     numberOfInvoices,
     numberOfTenants,
     totalPaidInvoices,
     totalPendingInvoices,
-  } = await fetchCardData();
+  } = await fetchCardData(landlordId);
+
   return (
     <main>
       <div className="flex justify-between items-center mb-4">
@@ -29,18 +31,14 @@ export default async function Page() {
         <Card title="Collected" value={totalPaidInvoices} type="collected" />
         <Card title="Pending" value={totalPendingInvoices} type="pending" />
         <Card title="Total Invoices" value={numberOfInvoices} type="invoices" />
-        <Card
-          title="Total Tenants"
-          value={numberOfTenants}
-          type="tenants"
-        />
+        <Card title="Total Tenants" value={numberOfTenants} type="tenants" />
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">
         <Suspense fallback={<RevenueChartSkeleton />}>
-          <RevenueChart />
+          <RevenueChart landlordId={landlordId} />
         </Suspense>
         <Suspense fallback={<LatestInvoicesSkeleton />}>
-          <LatestInvoices />
+          <LatestInvoices landlordId={landlordId} />
         </Suspense>
       </div>
     </main>

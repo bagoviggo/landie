@@ -16,7 +16,7 @@ async function getUser(email: string) {
         hashedPassword: true,
         role: true,
         landlords: {
-          select: { approvedAt: true },
+          select: { id: true, approvedAt: true },
           take: 1,
         },
       },
@@ -50,11 +50,8 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         const passwordsMatch = await bcrypt.compare(password, user.hashedPassword);
         if (!passwordsMatch) return null;
 
-        // For landlords check approval status, everyone else is considered approved
-        const isApproved =
-          user.role === 'landlord'
-            ? !!user.landlords[0]?.approvedAt
-            : true;
+        const landlord = user.landlords[0] ?? null;
+        const isApproved = user.role === 'landlord' ? !!landlord?.approvedAt : true;
 
         return {
           id: user.id,
@@ -62,6 +59,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           email: user.email,
           role: user.role,
           isApproved,
+          landlordId: landlord?.id ?? null,
         };
       },
     }),

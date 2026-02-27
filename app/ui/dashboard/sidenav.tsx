@@ -14,10 +14,15 @@ export default function SideNav() {
           <LandieLogo />
         </div>
       </Link>
-      <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-2">
-        <NavLinks />
-        <div className="hidden h-auto w-full grow rounded-md bg-gray-50 md:block"></div>
-        <LogoutButton />
+      <div className="flex grow flex-row justify-between space-x-2 md:flex-col md:space-x-0 md:space-y-2 md:overflow-hidden">
+        {/* Scrollable nav links */}
+        <div className="flex flex-row space-x-2 md:flex-col md:space-x-0 md:space-y-2 md:overflow-y-auto md:flex-1">
+          <NavLinks />
+        </div>
+        {/* Logout always visible at bottom */}
+        <div className="md:mt-2">
+          <LogoutButton />
+        </div>
       </div>
     </div>
   );

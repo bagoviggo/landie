@@ -6,20 +6,22 @@ import Search from '@/app/ui/search';
 import TenantsTable from '@/app/ui/tenants/table';
 import Pagination from '@/app/ui/invoices/pagination';
 import { CreateTenantButton } from '@/app/ui/tenants/buttons';
+import { auth } from '@/auth';
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams?: {
-    query?: string;
-    page?: string;
-  };
+  searchParams?: Promise<{ query?: string; page?: string }>;
 }) {
-  const query = searchParams?.query || '';
-  const currentPage = Number(searchParams?.page) || 1;
+  const session = await auth();
+  const landlordId = (session?.user as any)?.landlordId ?? null;
 
-  const tenants = await fetchFilteredTenants(query);
-  const totalPages = await fetchFilteredTenantsPages(query);
+  const params = await searchParams;
+  const query = params?.query || '';
+  const currentPage = Number(params?.page) || 1;
+
+  const tenants = await fetchFilteredTenants(query, landlordId);
+  const totalPages = await fetchFilteredTenantsPages(query, landlordId);
 
   return (
     <div className="w-full">

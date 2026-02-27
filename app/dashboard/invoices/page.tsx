@@ -1,7 +1,41 @@
-import React from 'react'
+import { Suspense } from 'react';
+import { fetchInvoicesPages } from '@/app/lib/data';
+import { lusitana } from '@/app/ui/fonts';;
+import Search from '@/app/ui/search';
+import InvoicesTable from '@/app/ui/invoices/table';
+import { CreateInvoice } from '@/app/ui/invoices/buttons';
+import Pagination from '@/app/ui/invoices/pagination';
+import { InvoicesTableSkeleton } from '@/app/ui/skeletons';
+import { auth } from '@/auth';
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<{ query?: string; page?: string }>;
+}) {
+  const session = await auth();
+  const landlordId = (session?.user as any)?.landlordId ?? null;
+
+  const params = await searchParams;
+  const query = params?.query || '';
+  const currentPage = Number(params?.page) || 1;
+  const totalPages = await fetchInvoicesPages(query, landlordId);
+
   return (
-    <p>Invoices Page</p>
-  )
+    <div className="w-full">
+      <div className="flex w-full items-center justify-between">
+        <h1 className={`${lusitana.className} text-2xl`}>Invoices</h1>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
+        <Search placeholder="Search invoices..." />
+        <CreateInvoice />
+      </div>
+      <Suspense key={query + currentPage} fallback={<InvoicesTableSkeleton />}>
+        <InvoicesTable query={query} currentPage={currentPage} landlordId={landlordId} />
+      </Suspense>
+      <div className="mt-5 flex w-full justify-center">
+        <Pagination totalPages={totalPages} />
+      </div>
+    </div>
+  );
 }

@@ -9,13 +9,15 @@ import { LandlordsTableSkeleton } from '@/app/ui/skeletons';
 export default async function Page({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     query?: string;
     page?: string;
-  };
+  }>;
 }) {
-  const query = searchParams?.query || '';
-  const currentPage = Number(searchParams?.page) || 1;
+  const params = await searchParams;
+
+  const query = params?.query || '';
+  const currentPage = Number(params?.page) || 1;
   const totalPages = await fetchLandlordsPages(query);
 
   return (

@@ -214,10 +214,10 @@ export async function fetchFilteredInvoices(
           scopeFilter,
           {
             OR: [
-              { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
-              { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
+              { tenant: { user: { name: { contains: query, mode: "insensitive" as const } } } },
+              { tenant: { user: { email: { contains: query, mode: "insensitive" as const } } } },
               { amount: { equals: isNaN(Number(query)) ? undefined : Number(query) } },
-              { status: { contains: query, mode: 'insensitive' } },
+              { status: { contains: query, mode: "insensitive" as const } },
             ],
           },
         ],
@@ -279,9 +279,9 @@ export async function fetchInvoicesPages(query: string, landlordId?: string | nu
           scopeFilter,
           {
             OR: [
-              { tenant: { user: { name: { contains: query, mode: 'insensitive' } } } },
-              { tenant: { user: { email: { contains: query, mode: 'insensitive' } } } },
-              { status: { contains: query, mode: 'insensitive' } },
+              { tenant: { user: { name: { contains: query, mode: "insensitive" as const } } } },
+              { tenant: { user: { email: { contains: query, mode: "insensitive" as const } } } },
+              { status: { contains: query, mode: "insensitive" as const } },
             ],
           },
         ],
@@ -297,13 +297,11 @@ export async function fetchInvoiceById(id: string) {
   try {
     const data = await prisma.invoice.findUnique({
       where: { id },
-      select: { id: true, tenant_id: true, amount: true, status: true },
+      select: { id: true, tenantId: true, amount: true, status: true },
     });
-    if (data) return { ...data, amount: data.amount / 100 };
+    if (data) return { id: data.id, tenant_id: data.tenantId, amount: data.amount / 100, status: data.status };
     return null;
   } catch (error) {
-    const invoice = invoices.find((inv: InvoiceData) => inv.id === id);
-    if (invoice) return { id: invoice.id, tenant_id: invoice.tenant_id, amount: invoice.amount / 100, status: invoice.status };
     return null;
   }
 }
@@ -336,9 +334,9 @@ export async function fetchFilteredTenants(query: string, landlordId?: string | 
           scopeFilter,
           {
             OR: [
-              { user: { name: { contains: query, mode: 'insensitive' } } },
-              { user: { email: { contains: query, mode: 'insensitive' } } },
-              { unitOccupied: { contains: query, mode: 'insensitive' } },
+              { user: { name: { contains: query, mode: "insensitive" as const } } },
+              { user: { email: { contains: query, mode: "insensitive" as const } } },
+              { unitOccupied: { contains: query, mode: "insensitive" as const } },
             ],
           },
         ],
@@ -382,9 +380,9 @@ export async function fetchFilteredTenantsPages(query: string, landlordId?: stri
           scopeFilter,
           {
             OR: [
-              { user: { name: { contains: query, mode: 'insensitive' } } },
-              { user: { email: { contains: query, mode: 'insensitive' } } },
-              { unitOccupied: { contains: query, mode: 'insensitive' } },
+              { user: { name: { contains: query, mode: "insensitive" as const } } },
+              { user: { email: { contains: query, mode: "insensitive" as const } } },
+              { unitOccupied: { contains: query, mode: "insensitive" as const } },
             ],
           },
         ],
@@ -523,8 +521,8 @@ export async function fetchFilteredProperties(query: string, landlordId?: string
           scopeFilter,
           {
             OR: [
-              { address: { contains: query, mode: 'insensitive' } },
-              { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
+              { address: { contains: query, mode: "insensitive" as const } },
+              { landlord: { companyName: { contains: query, mode: "insensitive" as const } } },
             ],
           },
         ],
@@ -562,8 +560,8 @@ export async function fetchPropertiesPages(query: string, landlordId?: string | 
           scopeFilter,
           {
             OR: [
-              { address: { contains: query, mode: 'insensitive' } },
-              { landlord: { companyName: { contains: query, mode: 'insensitive' } } },
+              { address: { contains: query, mode: "insensitive" as const } },
+              { landlord: { companyName: { contains: query, mode: "insensitive" as const } } },
             ],
           },
         ],
@@ -661,9 +659,9 @@ export async function fetchFilteredLandlords(query: string) {
     const data = await prisma.landlord.findMany({
       where: {
         OR: [
-          { user: { name: { contains: query, mode: 'insensitive' } } },
-          { user: { email: { contains: query, mode: 'insensitive' } } },
-          { companyName: { contains: query, mode: 'insensitive' } },
+          { user: { name: { contains: query, mode: "insensitive" as const } } },
+          { user: { email: { contains: query, mode: "insensitive" as const } } },
+          { companyName: { contains: query, mode: "insensitive" as const } },
         ],
       },
       include: {
@@ -691,9 +689,9 @@ export async function fetchLandlordsPages(query: string) {
     const count = await prisma.landlord.count({
       where: {
         OR: [
-          { user: { name: { contains: query, mode: 'insensitive' } } },
-          { user: { email: { contains: query, mode: 'insensitive' } } },
-          { companyName: { contains: query, mode: 'insensitive' } },
+          { user: { name: { contains: query, mode: "insensitive" as const } } },
+          { user: { email: { contains: query, mode: "insensitive" as const } } },
+          { companyName: { contains: query, mode: "insensitive" as const } },
         ],
       },
     });

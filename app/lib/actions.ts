@@ -224,3 +224,60 @@ export async function deleteInvoice(id: string) {
   }
   revalidatePath('/dashboard/invoices');
 }
+
+// ─── Maintenance Actions ──────────────────────────────────────────────────────
+
+const MaintenanceSchema = z.object({
+  unitId: z.string().min(1, 'Please select a unit'),
+  description: z.string().min(5, 'Description must be at least 5 characters'),
+  status: z.enum(['open', 'in_progress', 'resolved']),
+});
+
+export async function createMaintenanceRequest(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  const validated = MaintenanceSchema.safeParse({
+    unitId: formData.get('unitId'),
+    description: formData.get('description'),
+    status: formData.get('status'),
+  });
+
+  if (!validated.success) {
+    return validated.error.issues[0].message;
+  }
+
+  const { unitId, description, status } = validated.data;
+
+  try {
+    await prisma.maintenance.create({
+      data: { unitId, description, status, date: new Date() },
+    });
+  } catch (error) {
+    console.error('Create maintenance error:', error);
+    return 'Failed to create maintenance request.';
+  }
+
+  revalidatePath('/dashboard/maintenance');
+  redirect('/dashboard/maintenance');
+}
+
+export async function updateMaintenanceStatus(id: string, status: string) {
+  try {
+    await prisma.maintenance.update({ where: { id }, data: { status } });
+  } catch (error) {
+    console.error('Update maintenance error:', error);
+    throw new Error('Failed to update status.');
+  }
+  revalidatePath('/dashboard/maintenance');
+}
+
+export async function deleteMaintenanceRequest(id: string) {
+  try {
+    await prisma.maintenance.delete({ where: { id } });
+  } catch (error) {
+    console.error('Delete maintenance error:', error);
+    throw new Error('Failed to delete request.');
+  }
+  revalidatePath('/dashboard/maintenance');
+}

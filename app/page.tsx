@@ -17,6 +17,7 @@ export default function Page() {
 
           <nav className="flex flex-1 justify-center gap-6 text-white">
             <Link href="/features" className="hover:underline">Features</Link>
+            <Link href="/houses" className="hover:underline text-blue-300 font-medium">Find a Home</Link>
             <Link href="/pricing" className="hover:underline">Pricing</Link>
             <Link href="/contact" className="hover:underline">Contact</Link>
           </nav>

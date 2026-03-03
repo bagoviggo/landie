@@ -5,6 +5,8 @@ import LandieLogo from '@/app/ui/landie-logo';
 import Link from 'next/link';
 import { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Find a Home | Landie',
   description: 'Browse available rental properties and vacant units near you.',

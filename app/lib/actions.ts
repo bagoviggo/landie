@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { sendTenantVerificationEmail, sendLandlordOnboardingEmail } from '@/app/lib/email';
 
 export async function authenticate(
   prevState: string | undefined,
@@ -74,20 +75,78 @@ export async function signup(
       });
     }
 
-    await signIn('credentials', {
-      email: formData.get('email'),
-      password: formData.get('password'),
-      redirect: false,
+    // Create 24h verification token
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const tokenRecord = await prisma.verificationToken.create({
+      data: { userId: user.id, expiresAt },
     });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return 'Account created but sign-in failed. Please log in manually.';
+
+    // Tenants get a straight verify link; landlords get an onboarding link
+    if (role === 'landlord') {
+      await sendLandlordOnboardingEmail(email, name, tokenRecord.token);
+    } else {
+      await sendTenantVerificationEmail(email, name, tokenRecord.token);
     }
+  } catch (error) {
     console.error('Signup error:', error);
     return 'Something went wrong during signup. Please try again.';
   }
 
-  redirect('/dashboard');
+  redirect('/check-email');
+}
+
+// ── Landlord onboarding (called from /onboarding page) ────────────────────
+export async function completeOnboarding(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  const schema = z.object({
+    token: z.string().uuid('Invalid token'),
+    companyName: z.string().min(1, 'Company name is required'),
+    phone: z.string().min(6, 'Phone number is required'),
+    operatingArea: z.string().min(1, 'Please enter your operating area'),
+  });
+
+  const validatedFields = schema.safeParse({
+    token: formData.get('token'),
+    companyName: formData.get('companyName'),
+    phone: formData.get('phone'),
+    operatingArea: formData.get('operatingArea'),
+  });
+
+  if (!validatedFields.success) {
+    return validatedFields.error.issues[0].message;
+  }
+
+  const { token, companyName, phone, operatingArea } = validatedFields.data;
+
+  try {
+    const record = await prisma.verificationToken.findUnique({ where: { token } });
+
+    if (!record) return 'This link is invalid. Please sign up again.';
+    if (record.expiresAt < new Date()) {
+      await prisma.verificationToken.delete({ where: { token } });
+      return 'This link has expired. Please sign up again.';
+    }
+
+    // Mark email verified, update landlord profile, delete token — atomically
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: record.userId },
+        data: { emailVerified: new Date(), phone },
+      });
+      await tx.landlord.updateMany({
+        where: { userId: record.userId },
+        data: { companyName, operatingArea },
+      });
+      await tx.verificationToken.delete({ where: { token } });
+    });
+  } catch (error) {
+    console.error('Onboarding error:', error);
+    return 'Something went wrong. Please try again.';
+  }
+
+  redirect('/pending-approval');
 }
 
 export async function deleteProperty(id: string) {

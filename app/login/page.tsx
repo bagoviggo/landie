@@ -2,6 +2,8 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { authenticate } from '@/app/lib/actions';
 import Link from 'next/link';
 import {
@@ -9,10 +11,19 @@ import {
   KeyIcon,
   ExclamationCircleIcon,
   ArrowRightIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 
-export default function LoginPage() {
+function LoginContent() {
   const [errorMessage, dispatch] = useActionState(authenticate, undefined);
+  const searchParams = useSearchParams();
+  const verified = searchParams.get('verified') === 'true';
+  const tokenError = searchParams.get('error');
+  const errorBanner =
+    tokenError === 'token-expired' ? 'Your verification link has expired. Please sign up again.' :
+    tokenError === 'invalid-token' ? 'Invalid verification link. Please sign up again.' :
+    tokenError === 'server-error' ? 'Something went wrong. Please try again.' : null;
 
   return (
     <main className="flex min-h-screen">
@@ -115,6 +126,20 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Verification success banner */}
+            {verified && (
+              <div className="mb-2 flex items-center gap-3 rounded-xl bg-green-50 border border-green-200 px-4 py-3">
+                <CheckCircleIcon className="h-5 w-5 shrink-0 text-green-600" />
+                <p className="text-sm font-medium text-green-700">Email verified! You can now log in.</p>
+              </div>
+            )}
+            {/* Token error banner */}
+            {errorBanner && (
+              <div className="mb-2 flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-600" />
+                <p className="text-sm font-medium text-amber-700">{errorBanner}</p>
+              </div>
+            )}
             {/* Error */}
             {errorMessage && (
               <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2.5 border border-red-100">
@@ -154,5 +179,13 @@ function SubmitButton() {
       {pending ? 'Signing in...' : 'Sign in'}
       {!pending && <ArrowRightIcon className="h-4 w-4" />}
     </button>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

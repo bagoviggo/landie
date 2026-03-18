@@ -2,12 +2,12 @@ import Image from 'next/image';
 
 export default function LandieLogo() {
   return (
-    <div className="flex items-center h-full">
+    <div className="flex items-center">
       <Image
         src="/logo.jpeg"
-        width={150}
-        height={50}
-        className="object-contain max-h-full rounded"
+        width={80}
+        height={28}
+        className="object-contain rounded-lg"
         alt="Landie Logo"
         priority={true}
       />

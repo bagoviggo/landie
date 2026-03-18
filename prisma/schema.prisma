@@ -16,20 +16,30 @@ model User {
   image          String?
   role           String
   phone          String?
+  emailVerified  DateTime?
   createdAt      DateTime   @default(now())
   landlords      Landlord[]
   tenants        Tenant[]
   @@map("user")
 }
 
+model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique @default(uuid())
+  userId    String
+  expiresAt DateTime
+  @@map("verification_token")
+}
+
 model Landlord {
-  id          String     @id @default(uuid())
-  userId      String
-  companyName String
-  approvedAt  DateTime?  // null = pending approval, set = approved
-  approvedBy  String?    // id of the admin who approved
-  user        User       @relation(fields: [userId], references: [id])
-  properties  Property[]
+  id            String     @id @default(uuid())
+  userId        String
+  companyName   String
+  operatingArea String?
+  approvedAt    DateTime?
+  approvedBy    String?
+  user          User       @relation(fields: [userId], references: [id])
+  properties    Property[]
   @@map("landlord")
 }
 

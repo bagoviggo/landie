@@ -26,3 +26,4 @@ yarn-error.log*
 /app/seed/
 tsconfig.tsbuildinfo
 cookies.txt
+.env

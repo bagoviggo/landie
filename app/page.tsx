@@ -30,7 +30,7 @@ const fadeIn = {
   show: { opacity: 1, transition: { duration: 0.7 } },
 };
 
-// ── Features ────────────────────────────────────────────────────────────────
+// ── Features ───────────────────────────────────────────────────────────
 const FEATURES = [
   {
     icon: BuildingOfficeIcon,
@@ -64,7 +64,7 @@ const FEATURES = [
   },
 ];
 
-// ── Nav links ───────────────────────────────────────────────────────────────
+// ── Nav links ───────────────���──────────────────────────────────────────
 const NAV_LINKS = [
   { href: '/houses', label: 'Find a Home' },
   { href: '/features', label: 'Features' },
@@ -180,7 +180,7 @@ export default function Page() {
         </AnimatePresence>
       </header>
 
-      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      {/* ── HERO ────���───────────────────────────────────────────────────── */}
       <section className="relative flex min-h-screen items-center overflow-hidden pt-16">
 
         {/* Background image with dark overlay */}
@@ -203,20 +203,9 @@ export default function Page() {
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            {/* Badge */}
-            <motion.div
-              variants={fadeUp} initial="hidden" animate="show" custom={0}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-400/10 px-4 py-1.5 backdrop-blur-sm"
-            >
-              <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-blue-300">
-                Property Management, Simplified
-              </span>
-            </motion.div>
-
             {/* Headline */}
             <motion.h1
-              variants={fadeUp} initial="hidden" animate="show" custom={1}
+              variants={fadeUp} initial="hidden" animate="show" custom={0}
               className="mb-6 text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl"
             >
               Manage Every{' '}
@@ -228,7 +217,7 @@ export default function Page() {
 
             {/* Sub */}
             <motion.p
-              variants={fadeUp} initial="hidden" animate="show" custom={2}
+              variants={fadeUp} initial="hidden" animate="show" custom={1}
               className="mb-10 max-w-xl text-lg leading-relaxed text-gray-300"
             >
               Landie brings landlords, tenants, and properties under one roof.
@@ -237,19 +226,19 @@ export default function Page() {
 
             {/* CTAs */}
             <motion.div
-              variants={fadeUp} initial="hidden" animate="show" custom={3}
+              variants={fadeUp} initial="hidden" animate="show" custom={2}
               className="flex flex-wrap gap-4"
             >
               <Link
                 href="/signup"
-                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blue-600/30 transition hover:bg-blue-500 hover:shadow-blue-500/40"
+                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blue-600/30 transition hover:bg-blue-500 hover:shadow-blue-5[...]
               >
                 Get Started Free
                 <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 href="/houses"
-                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 hover:border-white/40"
+                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 hover:bord[...]
               >
                 <HomeModernIcon className="h-4 w-4 text-blue-400" />
                 Find a Home
@@ -307,7 +296,7 @@ export default function Page() {
         </motion.div>
       </div>
 
-      {/* ── FEATURES ──────────────────────────────────────────────────────── */}
+      {/* ── FEATURES ─────────────────────────���────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="show"

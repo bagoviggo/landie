@@ -64,7 +64,7 @@ const FEATURES = [
   },
 ];
 
-// ── Nav links ───────────────���──────────────────────────────────────────
+// ── Nav links ────────────────────────────────────────────────────────────────
 const NAV_LINKS = [
   { href: '/houses', label: 'Find a Home' },
   { href: '/features', label: 'Features' },
@@ -85,7 +85,7 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-[#0b1120] text-white overflow-x-hidden">
 
-      {/* ── NAVBAR ────────────────────────────────────────────────────────── */}
+      {/* ── NAVBAR ──────────────────────────────────────────────────────────── */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled ? 'bg-[#0b1120]/90 backdrop-blur-md shadow-lg shadow-black/30' : 'bg-transparent'
@@ -180,7 +180,7 @@ export default function Page() {
         </AnimatePresence>
       </header>
 
-      {/* ── HERO ────���───────────────────────────────────────────────────── */}
+      {/* ── HERO ────────────────────────────────────────────────────────────── */}
       <section className="relative flex min-h-screen items-center overflow-hidden pt-16">
 
         {/* Background image with dark overlay */}
@@ -231,14 +231,14 @@ export default function Page() {
             >
               <Link
                 href="/signup"
-                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blue-600/30 transition hover:bg-blue-500 hover:shadow-blue-5[...]
+                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blue-600/30 transition hover:bg-blue-500 hover:shadow-blue-500/30"
               >
                 Get Started Free
                 <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <Link
                 href="/houses"
-                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 hover:bord[...]
+                className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 hover:border-white/40"
               >
                 <HomeModernIcon className="h-4 w-4 text-blue-400" />
                 Find a Home
@@ -296,7 +296,7 @@ export default function Page() {
         </motion.div>
       </div>
 
-      {/* ── FEATURES ─────────────────────────���────────────────────────────── */}
+      {/* ── FEATURES ──────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
         <motion.div
           variants={fadeUp} initial="hidden" whileInView="show"

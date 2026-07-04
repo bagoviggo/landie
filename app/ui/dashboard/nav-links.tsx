@@ -11,41 +11,21 @@ import {
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import clsx from 'clsx';
 
-const baseLinks = [
+const links = [
   { name: 'Home', href: '/dashboard', icon: HomeIcon },
   { name: 'Invoices', href: '/dashboard/invoices', icon: DocumentDuplicateIcon },
   { name: 'Tenants', href: '/dashboard/tenants', icon: UserGroupIcon },
   { name: 'Maintenance', href: '/dashboard/maintenance', icon: WrenchIcon },
   { name: 'Reports', href: '/dashboard/report-and-analytics', icon: ChartBarIcon },
-];
-
-const landlordLinks = [
   { name: 'Properties', href: '/dashboard/properties', icon: BuildingOfficeIcon },
-];
-
-const adminLinks = [
   { name: 'Landlords', href: '/dashboard/landlords', icon: UserGroupIcon },
-  { name: 'Properties', href: '/dashboard/properties', icon: BuildingOfficeIcon },
   { name: 'Admin Panel', href: '/dashboard/admin', icon: ShieldCheckIcon },
 ];
 
 export default function NavLinks() {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const userRole = (session?.user as any)?.role;
-
-  let links = [...baseLinks];
-
-  if (userRole === 'landlord') {
-    links = [...links, ...landlordLinks];
-  }
-
-  if (userRole === 'admin') {
-    links = [...links, ...adminLinks];
-  }
 
   return (
     <>

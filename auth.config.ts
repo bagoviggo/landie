@@ -22,17 +22,10 @@ export const authConfig = {
       const isOnPendingApproval = path.startsWith('/pending-approval');
       const isOnOnboarding = path.startsWith('/onboarding');
       const isOnCheckEmail = path.startsWith('/check-email');
-      const isOnCompleteGoogle = path.startsWith('/api/complete-google-signup');
 
       if (!isLoggedIn) {
         if (isOnDashboard || isOnPendingApproval) return false;
         return true;
-      }
-
-      // Google users with pending role need to complete their profile
-      if (role === 'pending') {
-        if (isOnCompleteGoogle) return true;
-        return Response.redirect(new URL('/api/complete-google-signup', nextUrl));
       }
 
       // Allow onboarding and check-email for everyone (public)

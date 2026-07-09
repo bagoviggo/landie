@@ -1,6 +1,12 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend() {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const FROM    = process.env.RESEND_FROM_EMAIL ?? 'Landie <noreply@landie.app>';
 
@@ -44,7 +50,7 @@ const fallback = (href: string) =>
 export async function sendTenantVerificationEmail(toEmail: string, toName: string, token: string) {
   const url = `${APP_URL}/api/verify-email?token=${token}`;
   const first = toName.split(' ')[0];
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM, to: toEmail, subject: 'Verify your Landie account',
     html: emailShell(`
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">Welcome, ${first}! 👋</h1>
@@ -57,7 +63,7 @@ export async function sendTenantVerificationEmail(toEmail: string, toName: strin
 export async function sendLandlordOnboardingEmail(toEmail: string, toName: string, token: string) {
   const url = `${APP_URL}/onboarding?token=${token}`;
   const first = toName.split(' ')[0];
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM, to: toEmail, subject: 'Complete your Landie landlord profile',
     html: emailShell(`
       <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">One more step, ${first} 🏢</h1>

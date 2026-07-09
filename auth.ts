@@ -1,7 +1,6 @@
 import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import Credentials from 'next-auth/providers/credentials';
-import Google from 'next-auth/providers/google';
 import { z } from 'zod';
 import { prisma } from '@/app/lib/prisma';
 import * as bcrypt from 'bcrypt';
@@ -33,12 +32,6 @@ async function getUser(email: string) {
 export const { auth, signIn, signOut, handlers } = NextAuth({
   ...authConfig,
   providers: [
-    // ── Google provider ──────────────────────────────────────────────────
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-
     // ── Credentials provider ─────────────────────────────────────────────
     Credentials({
       async authorize(credentials) {
@@ -80,37 +73,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
   callbacks: {
     ...authConfig.callbacks,
-
-    async signIn({ user, account }) {
-      // Only handle Google sign-ins here
-      if (account?.provider !== 'google') return true;
-
-      const email = user.email;
-      if (!email) return false;
-
-      try {
-        const existing = await prisma.user.findUnique({ where: { email } });
-
-        if (!existing) {
-          // New Google user — create with role 'pending'
-          // Role will be finalized at /api/complete-google-signup
-          await prisma.user.create({
-            data: {
-              name: user.name ?? '',
-              email,
-              hashedPassword: '', // Google users don't use password
-              role: 'pending',
-              emailVerified: new Date(), // Google already verified the email
-            },
-          });
-        }
-
-        return true;
-      } catch (error) {
-        console.error('Google sign-in error:', error);
-        return false;
-      }
-    },
 
     async jwt({ token, user, account }: any) {
       if (user) {

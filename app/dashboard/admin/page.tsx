@@ -1,7 +1,5 @@
 import { lusitana } from '@/app/ui/fonts';
 import { prisma } from '@/app/lib/prisma';
-import { auth } from '@/auth';
-import { redirect } from 'next/navigation';
 import { approveLandlord, rejectLandlord } from '@/app/lib/actions';
 import {
   CheckCircleIcon,
@@ -9,6 +7,8 @@ import {
   ClockIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
+
+export const dynamic = 'force-dynamic';
 
 async function getPendingLandlords() {
   return prisma.landlord.findMany({
@@ -36,13 +36,6 @@ async function getApprovedLandlords() {
 }
 
 export default async function AdminPage() {
-  const session = await auth();
-
-  // Double-check on the server — only admins can access this page
-  if (!session?.user || (session.user as any).role !== 'admin') {
-    redirect('/dashboard');
-  }
-
   const [pending, approved] = await Promise.all([
     getPendingLandlords(),
     getApprovedLandlords(),

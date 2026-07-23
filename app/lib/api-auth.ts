@@ -1,18 +1,14 @@
-import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
 
 /**
- * Call this at the top of any API route handler that requires authentication.
- * Returns the session if valid, or a 401 NextResponse if not.
+ * Auth has been removed app-wide for now. This always succeeds so every
+ * API route that calls it continues to work without a session.
+ * Re-introduce a real check here if auth is added back later.
  *
  * Usage:
  *   const session = await requireAuth();
  *   if (session instanceof NextResponse) return session;
  */
 export async function requireAuth() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  return session;
+  return { user: { id: 'public', role: 'admin' } };
 }
